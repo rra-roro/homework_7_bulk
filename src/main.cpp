@@ -1,4 +1,5 @@
-﻿#include "bulk.h"
+﻿#include "subscribers.h"
+#include "bulk_reader.h"
 #include <iostream>
 #include <exception>
 #include <charconv>
