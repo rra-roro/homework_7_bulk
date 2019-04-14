@@ -7,7 +7,7 @@ namespace roro_lib
 {
       namespace internal
       {
-            inline static auto fn_comp = [](auto& fn1, auto& fn2) {
+            inline auto fn_comp = [](auto& fn1, auto& fn2) {
                   return &fn1 < &fn2;
             };
       }
@@ -18,6 +18,10 @@ namespace roro_lib
       template <typename R, typename... Args>
       class publisher_mixin<R(Args...)>
       {
+            //constexpr static auto fn_comp = [](auto& fn1, auto& fn2) {
+            //      return &fn1 < &fn2;
+            //};
+
             std::set< std::function<R(Args...)>,
                       decltype(internal::fn_comp)> subscribers{ internal::fn_comp };
 
@@ -62,6 +66,15 @@ namespace roro_lib
             template <class _Ty>
             static constexpr bool test_arg_subscriber_v = test_arg_subscriber<_Ty>::value;
 
+        protected:
+            void notify(Args... args)
+            {
+                  for (auto& subscriber : subscribers)
+                  {
+                        subscriber(args...);
+                  }
+            }
+
         public:
             template <typename F,
                       typename std::enable_if_t<std::is_pointer_v<F> &&
@@ -93,14 +106,6 @@ namespace roro_lib
 
                   add_subscriber(obj, &T::operator());
             }
-
-
-            void notify(Args... args)
-            {
-                  for (auto& subscriber : subscribers)
-                  {
-                        subscriber(args...);
-                  }
-            }
+          
       };
 }
