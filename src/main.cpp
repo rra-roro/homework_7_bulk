@@ -1,8 +1,7 @@
 ﻿#include "bulk.h"
-#include "publisher.h"
 #include <iostream>
 #include <exception>
-
+#include <charconv>
 
 #include "lib_version.h"
 #include "CLParser.h"
@@ -16,12 +15,12 @@ void help()
       cout << R"(
  This demo is my bulk.
 
-    bulk  [-version | -? | -math_oder_dimensions]
+    bulk  [-version | -? | -N]
        Options:  
-       -version                -get version of program
-       -?                      -about program (this info)
-       -math_oder_dimensions   -output dimensions at math order (like x, y). Example: column, row   
-                                By Default: row, column
+       -version      -get version of program
+       -?            -about program (this info)
+       -N            -count of command in the block. Should be > 1
+                                
 )" << endl;
 }
 
@@ -36,11 +35,12 @@ int main(int argc, char* argv[])
 {
       try
       {
+            size_t size_bulk = 0;
             ParserCommandLine PCL;
             PCL.AddFormatOfArg("?", no_argument, '?');
             PCL.AddFormatOfArg("help", no_argument, '?');
             PCL.AddFormatOfArg("version", no_argument, 'v');
-            PCL.AddFormatOfArg("math_oder_dimensions", no_argument, 'm');
+            PCL.AddFormatOfArg("N", required_argument, 'n');
 
             PCL.SetShowError(false);
             PCL.Parser(argc, argv);
@@ -56,17 +56,31 @@ int main(int argc, char* argv[])
                   return 0;
             }
 
-            command_reader pub(3);
+            if (!PCL.Option['n'])
+            {
+                  help();
+                  return 0;
+            }
+            else
+            {
+                  const size_t size_param = PCL.Option['n'].ParamOption[0].size();
+                  const char* const ptr_str = PCL.Option['n'].ParamOption[0].data();
+                  from_chars(ptr_str, ptr_str + size_param, size_bulk);
 
-            subscriber1 sub;
+                  if (size_bulk == 0)
+                  {
+                        help();
+                        return 0;
+                  }
+            }
 
-            pub.add_subscriber(sub, &subscriber1::fn);
-            pub.add_subscriber(subscriber2);
-            pub.add_subscriber(sub);
+            command_reader cmdr(size_bulk);
 
-            std::vector<string> qqq = { "dfasdf"};
-            pub.notify(qqq);
+            save_log_file log;            
+            cmdr.add_subscriber(log, &save_log_file::save);
+            cmdr.add_subscriber(output_to_console);
 
+            cmdr.read();
       }
       catch (const exception& ex)
       {

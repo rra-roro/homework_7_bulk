@@ -30,7 +30,7 @@ namespace roro_lib
             {
                   if constexpr (I < sizeof...(Args))
                   {
-                        add_subscriber_internal<I + 1, T, F, I, PhNumber...>(obj, fn);
+                        add_subscriber_internal<I + 1, T, F, PhNumber..., I>(obj, fn);
                   }
                   else
                   {
