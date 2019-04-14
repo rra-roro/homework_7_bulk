@@ -15,11 +15,11 @@ void help()
       cout << R"(
  This demo is my bulk.
 
-    bulk  [-version | -? | -N]
+    bulk  [-version | -? | -N <size>]
        Options:  
        -version      -get version of program
        -?            -about program (this info)
-       -N            -count of command in the block. Should be > 1
+       -N <size>     -count of command in the block. Should be > 1
                                 
 )" << endl;
 }

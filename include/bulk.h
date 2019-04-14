@@ -6,6 +6,7 @@
 #include <ctime>
 #include <fstream>
 #include <cstdlib>
+#include <exception>
 #include "publisher.h"
 
 namespace roro_lib
@@ -13,9 +14,6 @@ namespace roro_lib
       class command_reader : public publisher_mixin<void(const std::vector<std::string>&, std::time_t)>
       {
             size_t size_bulk;
-
-        public:
-            command_reader(size_t size_bulk) : size_bulk(size_bulk){};
 
             std::time_t get_time()
             {
@@ -33,14 +31,14 @@ namespace roro_lib
 
             void brackets_read()
             {
-                  size_t count = 1;
+                  size_t count_bracket = 1;
                   std::time_t time_first_cmd = 0;
                   std::vector<std::string> command_list;
 
-                  for (std::string line; count != 0;)
+                  for (std::string line; count_bracket != 0;)
                   {
-                        if (!getline(std::cin, line))
-                              exit(EXIT_SUCCESS);
+                        if (!getline(std::cin, line))  
+                              exit(EXIT_SUCCESS);        // Program exit  by EOF. (Console Linux Ctrl+D. Console Windows Ctrl+Z)
 
                         if (time_first_cmd == 0)                        
                               time_first_cmd = get_time();
@@ -48,13 +46,13 @@ namespace roro_lib
 
                         if (line == "{")
                         {
-                              ++count;
+                              ++count_bracket;
                               continue;
                         }
 
                         if (line == "}")
                         {
-                              --count;
+                              --count_bracket;
                               continue;
                         }
 
@@ -64,34 +62,42 @@ namespace roro_lib
                   notify_subscribers(command_list, time_first_cmd);
             }
 
+        public:
+            command_reader(size_t size_bulk) : size_bulk(size_bulk){};
+
             void read()
             {
-                  size_t i = 0;
+                  size_t count_cmd_bulk = 0;
                   std::time_t time_first_cmd = 0;
                   std::vector<std::string> command_list;
 
-                  for (std::string line; getline(std::cin, line);)
+                  for (std::string line; getline(std::cin, line);)  // For exit by EOF. (Console Linux Ctrl+D. Console Windows Ctrl+Z)
                   {
-                        if (i == 0)
+                        if (count_cmd_bulk == 0)
                               time_first_cmd = get_time();
 
                         if (line == "{")
                         {
                               notify_subscribers(command_list, time_first_cmd);
                               brackets_read();
-                              i = 0;
+                              count_cmd_bulk = 0;
                               continue;
+                        }
+
+                        if (line == "}")
+                        {
+                              throw std::exception("found not a pair bracket");
                         }
 
                         command_list.push_back(line);
 
-                        if (i == size_bulk - 1)
+                        if (count_cmd_bulk == size_bulk - 1)
                         {
                               notify_subscribers(command_list, time_first_cmd);
-                              i = 0;
+                              count_cmd_bulk = 0;
                               continue;
                         }
-                        i++;
+                        count_cmd_bulk++;
                   }
 
                   notify_subscribers(command_list, time_first_cmd);
