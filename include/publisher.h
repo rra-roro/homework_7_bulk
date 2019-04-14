@@ -5,24 +5,20 @@
 
 namespace roro_lib
 {
-
-      /*inline auto fn_comp = [](auto& fn1, auto& fn2) {
-            return &fn1 < &fn2;
-      };
-
-*/
       template <typename>
       class publisher_mixin;
 
       template <typename R, typename... Args>
       class publisher_mixin<R(Args...)>
       {
-            constexpr static auto fn_comp = [](auto& fn1, auto& fn2) {
-                  return &fn1 < &fn2;
-            };
+            using fn_comp_t = bool (*)(const std::function<R(Args...)>&, const std::function<R(Args...)>&);
 
-            std::set<std::function<R(Args...)>, decltype(fn_comp)> subscribers{fn_comp };
-
+            std::set<std::function<R(Args...)>, fn_comp_t> subscribers{
+                                                                        [](auto& fn1, auto &fn2)
+                                                                        {
+                                                                            return &fn1 < &fn2;
+                                                                        }
+                                                                       };
             template <std::size_t I = 0,
                 typename T,
                 typename F = R (T::*)(Args...),
