@@ -1,6 +1,8 @@
-﻿#include "publisher.h"
+﻿#include "bulk.h"
+#include "publisher.h"
 #include <iostream>
 #include <exception>
+
 
 #include "lib_version.h"
 #include "CLParser.h"
@@ -26,28 +28,6 @@ void help()
 void version_bulk()
 {
       cout << "Version bulk: " << version() << endl;
-}
-
-class publisher : public publisher_mixin<void(int)>
-{
-};
-
-struct subscriber1
-{
-      void operator()(int i)
-      {
-            std::cout << "subscriber1_op=" << i << "\n";
-      }
-
-      void fn(int i)
-      {
-            std::cout << "subscriber1_fn=" << i << "\n";
-      }
-};
-
-void subscriber2(int i)
-{
-      std::cout << "subscriber2=" << i << "\n";
 }
 
 #ifndef _TEST
@@ -76,7 +56,7 @@ int main(int argc, char* argv[])
                   return 0;
             }
 
-            publisher pub;
+            command_reader pub(3);
 
             subscriber1 sub;
 
@@ -84,7 +64,8 @@ int main(int argc, char* argv[])
             pub.add_subscriber(subscriber2);
             pub.add_subscriber(sub);
 
-            pub.notify(5);
+            std::vector<string> qqq = { "dfasdf"};
+            pub.notify(qqq);
 
       }
       catch (const exception& ex)

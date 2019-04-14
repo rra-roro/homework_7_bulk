@@ -45,17 +45,17 @@ namespace roro_lib
             {
             };
 
-            template <typename Rеt, typename... A>
-            struct test_arg_subscriber<Rеt (*)(A...),
-                                      std::enable_if_t<std::is_same_v<std::tuple<A...>,
-                                                                      std::tuple<Args...>>>> : std::true_type
+            template <typename Ret, typename... A>
+            struct test_arg_subscriber<Ret (*)(A...),
+                                       std::enable_if_t<std::is_same_v<std::tuple<Ret,A...>,
+                                                                       std::tuple<R, Args...>>>> : std::true_type
             {
             };
 
-            template <typename Rеt, typename C, typename... A>
-            struct test_arg_subscriber<Rеt (C::*)(A...),
-                                       std::enable_if_t<std::is_same_v<std::tuple<A...>,
-                                                                       std::tuple<Args...>>>> : std::true_type
+            template <typename Ret, typename C, typename... A>
+            struct test_arg_subscriber<Ret (C::*)(A...),
+                                       std::enable_if_t<std::is_same_v<std::tuple<Ret,A...>,
+                                                                       std::tuple<R, Args...>>>> : std::true_type
             {
             };
 
