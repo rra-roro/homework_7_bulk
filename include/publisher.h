@@ -108,6 +108,8 @@ namespace roro_lib
                   static_assert(test_arg_subscriber_v<decltype(&T::operator())>,
                       "the signature of the subscriber functor must match the signature declared by the publisher");
 
+                  std::cout << "add_subscriber obj by: 0x" << std::hex << &obj << "\n";
+
                   add_subscriber(obj, &T::operator());
             }
 
