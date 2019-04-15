@@ -20,11 +20,11 @@ namespace roro_lib
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
-                  template <typename T, typename R, typename... Args>
-                  key(const T& obj, R (T::*fn)(Args...)) : key_value{ static_cast<void*>(const_cast<T*>(&obj)),
-                                                                      reinterpret_cast<fn_mem_t>(fn) }
+                  template <typename T, typename FM, typename FMx = void (Facke::*)(void)>
+                  key(const T& obj, FM fn) : key_value{ static_cast<void*>(const_cast<T*>(&obj)),
+                                                        reinterpret_cast<FMx>(fn) }
                   {
-                  }
+                  }   
 #if __GNUG__
 #pragma GCC diagnostic pop
 #endif
@@ -54,9 +54,6 @@ namespace std
 {
       /*!   \brief  Это специализация std::hash для нашей структуры key.
 
-                    Это специализация функтора std::hash, который вычисляет хеш на основании координат из структуры key.
-                    Этот хэш используется в unordered_map, где хранятся используемые ячейки разреженной матрицы
-                    Эта специализация может быть объявлена в пространстве имен std
       */
       template<>
       struct hash<roro_lib::internal::key>
@@ -66,7 +63,8 @@ namespace std
 
             result_t operator()(const argument_t& key_arg) const noexcept
             {
-                  return std::hash<std::size_t>{}(reinterpret_cast< std::intptr_t > (const_cast<void*>(key_arg.key_value.first)));
+                  return std::hash<std::size_t>{}
+                               (reinterpret_cast< std::intptr_t > (const_cast<void*>(key_arg.key_value.first)));
             }
       };
 }
@@ -130,7 +128,6 @@ namespace roro_lib
             constexpr void add_subscriber_internal(const T& fn)
             {
                   subscribers.insert({{fn},fn});
-                  //subscribers[fn] = fn;
             }
 
             template <std::size_t I = 0,
@@ -149,8 +146,6 @@ namespace roro_lib
                         constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);
 
                         subscribers.insert({ { obj, fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
-
-                        //subscribers[{ obj, fn }] = std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...);
                   }
             }
 
@@ -175,5 +170,11 @@ namespace roro_lib
 
             template <class _Ty>
             static constexpr bool test_arg_subscriber_v = test_arg_subscriber<_Ty>::value;
+
+#ifdef PRIVATE_TEST
+            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers1);
+            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
+            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
+#endif
       };
 }
