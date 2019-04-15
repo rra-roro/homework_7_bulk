@@ -140,7 +140,7 @@ namespace roro_lib
                   {
                         add_subscriber_internal<I + 1, T, F, PhNumber..., I>(obj, fn);
                   }
-                  if constexpr (sizeof...(Args) == 0)
+                  else if constexpr (sizeof...(Args) == 0)
                   {
                         subscribers.insert({ { obj, fn }, std::bind(fn, obj) });
                   }
