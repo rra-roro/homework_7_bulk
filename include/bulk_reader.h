@@ -35,7 +35,7 @@ namespace roro_lib
 
                         if (line == "}")
                         {
-                              throw std::exception("found not a pair bracket");
+                              throw std::runtime_error("found not a pair bracket");
                         }
 
                         command_list.push_back(line);
