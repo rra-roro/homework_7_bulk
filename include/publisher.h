@@ -21,7 +21,6 @@ namespace roro_lib
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
-
                   template <typename T, typename FM, typename FMx = void (Facke::*)(void),
                             typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
                   key(T&& obj, FM fn) : key_value{ static_cast<void*>(&obj),
@@ -98,6 +97,9 @@ namespace roro_lib
       template <typename R, typename... Args>
       class publisher_mixin<R(Args...)>
       {
+            static_assert(sizeof...(Args) < 20,
+                "the subscriber must have less 20 arguments");
+
         public:
             template <typename F,
                 typename std::enable_if_t<std::is_pointer_v<F> &&
@@ -163,13 +165,22 @@ namespace roro_lib
                   }
                   else if constexpr (sizeof...(Args) == 0)
                   {
-                        subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj) });
+                        if constexpr (std::is_rvalue_reference_v<T&&>)
+                              subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj) });
+                        else
+                              subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, std::ref(obj)) });
                   }
                   else
                   {
                         using namespace std::placeholders;
-                        constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);
-                        subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
+                        constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
+
+                        if constexpr (std::is_rvalue_reference_v<T&&>)
+                              subscribers.insert({ { std::forward<T>(obj), fn },
+                                                   std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
+                        else
+                              subscribers.insert({ { std::forward<T>(obj), fn },
+                                                   std::bind(fn, std::ref(obj), std::get<PhNumber>(placeholders_tuple)...) });
                   }
             }
 
@@ -187,8 +198,8 @@ namespace roro_lib
 
             template <typename Ret, typename C, typename... A>
             struct test_arg_subscriber<Ret (C::*)(A...),
-                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                    std::tuple<R, Args...>>>> : std::true_type
+                                       std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
+                                                        std::tuple<R, Args...>>>> : std::true_type
             {
             };
 

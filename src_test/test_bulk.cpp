@@ -165,3 +165,41 @@ namespace roro_lib
       }
 }
 
+struct subscriber_state
+{
+      int st = 0;
+      void test() { ++st; };
+      void operator()() { ++st; };
+};
+
+namespace roro_lib
+{
+      TEST_F(PublisherMixinTest, AddSubscribersByRef)
+      {
+            publisher pbl;
+
+            subscriber_state sscr;
+
+            pbl.add_subscriber(sscr);
+            pbl.add_subscriber(sscr, &subscriber_state::test);
+            pbl.run();
+
+            ASSERT_TRUE(sscr.st == 2);
+      }
+
+      TEST_F(PublisherMixinTest, AddSubscribersByValue)
+      {
+            publisher pbl;
+
+            subscriber_state sscr;
+
+            pbl.add_subscriber(std::move(sscr));
+            pbl.add_subscriber(std::move(sscr), &subscriber_state::test);
+            pbl.run();
+
+            pbl.add_subscriber(subscriber_state());
+            pbl.add_subscriber(subscriber_state(), &subscriber_state::test);
+
+            ASSERT_TRUE(sscr.st == 0);
+      }
+}
