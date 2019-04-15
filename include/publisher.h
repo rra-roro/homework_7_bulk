@@ -13,6 +13,7 @@ namespace roro_lib
                   using fn_mem_t = void (Facke::*)(void);
 
                   std::pair<void*, fn_mem_t> key_value;
+                  bool rvalue;
 
                   key() = delete;
 
@@ -20,24 +21,37 @@ namespace roro_lib
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
-                  template <typename T, typename FM, typename FMx = void (Facke::*)(void)>
-                  key(const T& obj, FM fn) : key_value{ static_cast<void*>(const_cast<T*>(&obj)),
-                                                        reinterpret_cast<FMx>(fn) }
+
+                  template <typename T, typename FM, typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                  key(T&& obj, FM fn) : key_value{ static_cast<void*>(&obj),
+                                                   reinterpret_cast<FMx>(fn) },
+                                        rvalue(true)
                   {
-                  }   
+                  }
+
+                  template <typename T, typename FM, typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                  key(T&& obj, FM fn) : key_value{ static_cast<void*>(&obj),
+                                                   reinterpret_cast<FMx>(fn) },
+                                        rvalue(false)
+                  {
+                  }
+
 #if __GNUG__
 #pragma GCC diagnostic pop
 #endif
                   template <typename T>
-                  key(const T& obj) : key_value{ static_cast<void*>(const_cast<T*>(&obj)), nullptr}
+                  key(const T& obj) : key_value{ static_cast<void*>(const_cast<T*>(&obj)), nullptr },
+                                      rvalue(false)
                   {
                   }
 
-                  key(const key& key_arg) : key_value(key_arg.key_value)
+                  key(const key& key_arg) : key_value(key_arg.key_value), rvalue(key_arg.rvalue)
                   {
                   }
 
-                  key(key&& key_arg)
+                  key(key&& key_arg) : rvalue(key_arg.rvalue)
                   {
                         key_value.swap(key_arg.key_value);
                   }                  
@@ -45,6 +59,11 @@ namespace roro_lib
 
             bool operator==(const key& arg1, const key& arg2)
             {
+                  if (arg1.rvalue == true && arg2.rvalue == true)
+                  {
+                        return false;
+                  }
+                  else
                   return (arg1.key_value == arg2.key_value);
             }
       }
@@ -93,25 +112,25 @@ namespace roro_lib
 
             template <typename T, typename MF,
                 typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr>
-            void add_subscriber(const T& obj, MF mfn)
+            void add_subscriber(T&& obj, MF mfn)
             {
                   static_assert(test_arg_subscriber_v<MF>,
                       "the signature of the subscriber member function must match the signature declared by the publisher");
 
-                  add_subscriber_internal(obj, mfn);
+                  add_subscriber_internal(std::forward<T>(obj), mfn);
             }
 
-            template <typename T,
-                typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
-            void add_subscriber(const T& obj)
+            template <typename R,
+                      typename T = std::remove_reference_t<R>,
+                      typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
+            void add_subscriber(R&& obj)
             {
                   static_assert(test_arg_subscriber_v<decltype(&T::operator())>,
                       "the signature of the subscriber functor must match the signature declared by the publisher");
 
-                  std::cout << "add_subscriber obj by: 0x" << std::hex << &obj << "\n";
-
-                  add_subscriber(obj, &T::operator());
+                  add_subscriber(std::forward<R>(obj), &T::operator());
             }
+
 
         protected:
             void notify(Args... args)
@@ -136,7 +155,7 @@ namespace roro_lib
                 typename T,
                 typename F = R (T::*)(Args...),
                 std::size_t... PhNumber>
-            constexpr void add_subscriber_internal(const T& obj, F fn)
+            constexpr void add_subscriber_internal(T&& obj, F fn)
             {
                   if constexpr (I < sizeof...(Args))
                   {
@@ -144,13 +163,13 @@ namespace roro_lib
                   }
                   else if constexpr (sizeof...(Args) == 0)
                   {
-                        subscribers.insert({ { obj, fn }, std::bind(fn, obj) });
+                        subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj) });
                   }
                   else
                   {
                         using namespace std::placeholders;
                         constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);
-                        subscribers.insert({ { obj, fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
+                        subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
                   }
             }
 
