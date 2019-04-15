@@ -16,7 +16,7 @@ namespace roro_lib
 
                   key() = delete;
 
-#if defined(GCC)
+#if __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
@@ -25,7 +25,7 @@ namespace roro_lib
                                                                       reinterpret_cast<fn_mem_t>(fn) }
                   {
                   }
-#if defined(GCC)
+#if __GNUG__
 #pragma GCC diagnostic pop
 #endif
                   template <typename T>
