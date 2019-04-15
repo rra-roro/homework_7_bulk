@@ -38,7 +38,7 @@ script:
 - cmake --build .
 - cmake --build . --target test
 - cmake --build . --target package
-- ./test_bulk 
+- ./src/test_bulk 
 - doxygen Doxyfile
 
 deploy:
