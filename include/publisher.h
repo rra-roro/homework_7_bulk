@@ -140,11 +140,14 @@ namespace roro_lib
                   {
                         add_subscriber_internal<I + 1, T, F, PhNumber..., I>(obj, fn);
                   }
+                  if constexpr (sizeof...(Args) == 0)
+                  {
+                        subscribers.insert({ { obj, fn }, std::bind(fn, obj) });
+                  }
                   else
                   {
                         using namespace std::placeholders;
                         constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);
-
                         subscribers.insert({ { obj, fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
                   }
             }
