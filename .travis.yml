@@ -38,7 +38,7 @@ script:
 - cmake --build .
 - cmake --build . --target test
 - cmake --build . --target package
-- /home/travis/build/rra-roro/homework_7_bulk/test_bulk 
+- /home/travis/build/rra-roro/homework_7_bulk/src/test_bulk 
 - doxygen Doxyfile
 
 deploy:
