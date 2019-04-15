@@ -120,15 +120,15 @@ namespace roro_lib
                   add_subscriber_internal(std::forward<T>(obj), mfn);
             }
 
-            template <typename R,
-                      typename T = std::remove_reference_t<R>,
+            template <typename Ref_,
+                      typename T = std::remove_reference_t<Ref_>,
                       typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
-            void add_subscriber(R&& obj)
+            void add_subscriber(Ref_&& obj)
             {
                   static_assert(test_arg_subscriber_v<decltype(&T::operator())>,
                       "the signature of the subscriber functor must match the signature declared by the publisher");
 
-                  add_subscriber(std::forward<R>(obj), &T::operator());
+                  add_subscriber(std::forward<Ref_>(obj), &T::operator());
             }
 
 
