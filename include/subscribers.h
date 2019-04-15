@@ -40,5 +40,10 @@ namespace roro_lib
                         fout << cmd << "\n";
                   }
             };
+
+            void operator()(const std::vector<std::string>& command_list, std::time_t time_first_cmd)
+            {
+
+            }
       };
 }
