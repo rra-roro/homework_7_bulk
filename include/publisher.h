@@ -16,23 +16,31 @@ namespace roro_lib
 
                   key() = delete;
 
+#if defined(GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
                   template <typename T, typename R, typename... Args>
                   key(const T& obj, R (T::*fn)(Args...)) : key_value{ static_cast<void*>(const_cast<T*>(&obj)),
                                                                       reinterpret_cast<fn_mem_t>(fn) }
                   {
-                  };
-
+                  }
+#if defined(GCC)
+#pragma GCC diagnostic pop
+#endif
                   template <typename T>
-                  key(const T& obj) : key_value{ static_cast<void*>(const_cast<T*>(&obj)), nullptr} {};
+                  key(const T& obj) : key_value{ static_cast<void*>(const_cast<T*>(&obj)), nullptr}
+                  {
+                  }
 
                   key(const key& key_arg) : key_value(key_arg.key_value)
                   {
-                  };
+                  }
 
                   key(key&& key_arg)
                   {
                         key_value.swap(key_arg.key_value);
-                  };                  
+                  }                  
             };
 
             bool operator==(const key& arg1, const key& arg2)
@@ -82,8 +90,6 @@ namespace roro_lib
                   static_assert(test_arg_subscriber_v<F>,
                       "the signature of the subscriber function must match the signature declared by the publisher");
 
-                  //subscribers.insert(fn);
-                  //subscribers[fn] = fn;
                   add_subscriber_internal(fn);
             }
 
@@ -117,22 +123,14 @@ namespace roro_lib
             }
 
         private:
-            //using fn_comp_t = bool (*)(const std::function<R(Args...)>&, const std::function<R(Args...)>&);
-
-            //std::set<std::function<R(Args...)>, fn_comp_t> subscribers{
-            //      [](auto& fn1, auto& fn2) {
-            //            std::cout << fn1.target_type().name() << "<-\n->" << fn1.target_type().name() << "\n\n";
-            //            //return &fn1 < &fn2;
-            //            return fn1.target_type().name() < fn1.target_type().name();
-            //      }
-            //};
             
             std::unordered_map<internal::key, std::function<R(Args...)>> subscribers;
 
             template <typename T>
             constexpr void add_subscriber_internal(const T& fn)
             {
-                  subscribers[fn] = fn;
+                  subscribers.insert({{fn},fn});
+                  //subscribers[fn] = fn;
             }
 
             template <std::size_t I = 0,
@@ -149,9 +147,10 @@ namespace roro_lib
                   {
                         using namespace std::placeholders;
                         constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);
-                        //subscribers.insert(std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...));
-                        //fn_key_t fn_key = { &obj, fn };
-                        subscribers[{ obj, fn }] = std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...);
+
+                        subscribers.insert({ { obj, fn }, std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
+
+                        //subscribers[{ obj, fn }] = std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...);
                   }
             }
 
