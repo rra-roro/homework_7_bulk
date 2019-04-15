@@ -141,7 +141,7 @@ namespace roro_lib
             subscriber_d2 sd2;
 
             
-            i_subscriber& is = sd2;
+            //i_subscriber& is = sd2;
             subscriber_base& sb = sd2;
 
             pbl.add_subscriber(sd1, &subscriber_d2::test0);

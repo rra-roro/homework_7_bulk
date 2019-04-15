@@ -80,10 +80,6 @@ int main(int argc, char* argv[])
             save_log_file log;
             cmdr.add_subscriber(log, &save_log_file::save);
             cmdr.add_subscriber(output_to_console);
-            cmdr.add_subscriber(output_to_console);
-            cmdr.add_subscriber(log);
-            cmdr.add_subscriber(log, &save_log_file::save);
-            cmdr.add_subscriber(log);
 
             cmdr.read();
       }
