@@ -52,7 +52,7 @@ namespace roro_lib
             ASSERT_TRUE(pbl.subscribers.size() == 1);
 
             pbl.add_subscriber(subscriber_functor());           // 2
-            ASSERT_TRUE(pbl.subscribers.size() == 2);C
+            ASSERT_TRUE(pbl.subscribers.size() == 2);
 
             subscriber_functor sf;
 
