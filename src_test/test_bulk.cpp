@@ -63,6 +63,7 @@ namespace roro_lib
             pbl.add_subscriber(sf);                             // Уже есть в подписчиках
             pbl.add_subscriber(sf, &subscriber_functor::test);  // Уже есть в подписчиках
 
+            std::cout << "pbl.subscribers.size()====" << pbl.subscribers.size() << "\n";
 
             ASSERT_TRUE(pbl.subscribers.size() == 5);
       }
