@@ -47,23 +47,29 @@ namespace roro_lib
       TEST_F(PublisherMixinTest, UniqueAddSubscribers1)
       {
             publisher pbl;
+
             pbl.add_subscriber(subscriber_fn);                  // 1
+            ASSERT_TRUE(pbl.subscribers.size() == 1);
+
             pbl.add_subscriber(subscriber_functor());           // 2
+            ASSERT_TRUE(pbl.subscribers.size() == 2);C
 
             subscriber_functor sf;
 
             pbl.add_subscriber(sf);                             // 3
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
+
             pbl.add_subscriber(sf, &subscriber_functor::test);  // 4
+            ASSERT_TRUE(pbl.subscribers.size() == 4);
 
             // ----
             pbl.add_subscriber(subscriber_functor());           // 5  - новый уникальный функтор
+            ASSERT_TRUE(pbl.subscribers.size() == 5);
 
             // ----
             pbl.add_subscriber(subscriber_fn);                  // Уже есть в подписчиках
             pbl.add_subscriber(sf);                             // Уже есть в подписчиках
             pbl.add_subscriber(sf, &subscriber_functor::test);  // Уже есть в подписчиках
-
-            std::cout << "pbl.subscribers.size()====" << pbl.subscribers.size() << "\n";
 
             ASSERT_TRUE(pbl.subscribers.size() == 5);
       }
