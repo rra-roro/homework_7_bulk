@@ -92,14 +92,14 @@ namespace roro_lib
 {
 
       template <typename>
-      class publisher_mixin;
+      class publisher_unique_mixin;
 
       template <typename R, typename... Args>
-      class publisher_mixin<R(Args...)>
+      class publisher_unique_mixin<R(Args...)>
       {
             static_assert(sizeof...(Args) < 20,
                 "the subscriber must have less 20 arguments");
-
+            
         public:
             template <typename F,
                 typename std::enable_if_t<std::is_pointer_v<F> &&
@@ -173,7 +173,8 @@ namespace roro_lib
                   else
                   {
                         using namespace std::placeholders;
-                        constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
+                        constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10,
+                                                                            _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
 
                         if constexpr (std::is_rvalue_reference_v<T&&>)
                               subscribers.insert({ { std::forward<T>(obj), fn },
@@ -207,9 +208,9 @@ namespace roro_lib
             static constexpr bool test_arg_subscriber_v = test_arg_subscriber<_Ty>::value;
 
 #ifdef PRIVATE_TEST
-            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers1);
-            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
-            FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
+            FRIEND_TEST(PublisherUniqueMixinTest, UniqueAddSubscribers1);
+            FRIEND_TEST(PublisherUniqueMixinTest, UniqueAddSubscribers2);
+            FRIEND_TEST(PublisherUniqueMixinTest, UniqueAddSubscribers3);
 #endif
       };
 }

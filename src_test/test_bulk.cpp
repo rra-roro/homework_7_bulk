@@ -4,7 +4,7 @@
 #include "lib_version.h"
 
 #define PRIVATE_TEST 1
-#include "publisher.h"
+#include "publisher_unique.h"
 
 TEST(version, test1)
 {
@@ -12,7 +12,7 @@ TEST(version, test1)
 }
 
 
-struct publisher : public roro_lib::publisher_mixin<void(void)>
+struct publisher : public roro_lib::publisher_unique_mixin<void(void)>
 {
       void run()
       {
@@ -37,14 +37,14 @@ struct subscriber_functor
 namespace roro_lib
 {
 
-      class PublisherMixinTest : public testing::Test
+      class PublisherUniqueMixinTest : public testing::Test
       {
         public:
             void SetUp() {}
             void TearDown() {}
       };
 
-      TEST_F(PublisherMixinTest, UniqueAddSubscribers1)
+      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers1)
       {
             publisher pbl;
 
@@ -101,7 +101,7 @@ struct subscriber_d : subscriber_base2
 
 namespace roro_lib
 {
-      TEST_F(PublisherMixinTest, UniqueAddSubscribers2)
+      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers2)
       {
             publisher pbl;
             subscriber_d sd;
@@ -140,7 +140,7 @@ struct subscriber_d2 : subscriber_base
 
 namespace roro_lib
 {
-      TEST_F(PublisherMixinTest, UniqueAddSubscribers3)
+      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers3)
       {
             publisher pbl;
 
@@ -174,7 +174,7 @@ struct subscriber_state
 
 namespace roro_lib
 {
-      TEST_F(PublisherMixinTest, AddSubscribersByRef)
+      TEST_F(PublisherUniqueMixinTest, StoreSubscribersByRef)
       {
             publisher pbl;
 
@@ -187,7 +187,7 @@ namespace roro_lib
             ASSERT_TRUE(sscr.st == 2);
       }
 
-      TEST_F(PublisherMixinTest, AddSubscribersByValue)
+      TEST_F(PublisherUniqueMixinTest, StoreSubscribersByValue)
       {
             publisher pbl;
 
@@ -195,10 +195,11 @@ namespace roro_lib
 
             pbl.add_subscriber(std::move(sscr));
             pbl.add_subscriber(std::move(sscr), &subscriber_state::test);
-            pbl.run();
 
             pbl.add_subscriber(subscriber_state());
             pbl.add_subscriber(subscriber_state(), &subscriber_state::test);
+
+            pbl.run();
 
             ASSERT_TRUE(sscr.st == 0);
       }

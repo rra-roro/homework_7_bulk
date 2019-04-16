@@ -5,11 +5,11 @@
 #include <ctime>
 #include <cstdlib>
 #include <exception>
-#include "publisher.h"
+#include "publisher_unique.h"
 
 namespace roro_lib
 {
-      class command_reader : public publisher_mixin<void(const std::vector<std::string>&, std::time_t)>
+      class command_reader : public publisher_unique_mixin<void(const std::vector<std::string>&, std::time_t)>
       {
         public:
             command_reader(size_t size_bulk) : size_bulk(size_bulk){};
