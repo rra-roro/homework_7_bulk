@@ -69,7 +69,7 @@ publisher pbl;
 pbl.add_subscriber(std::bind(&subscriber_md::test2, md));
 ```
    
-   При желании, мы так же можем подписать один и тот же функциональный объектнесколько раз.<br>
+   При желании, мы так же можем подписать один и тот же функциональный объект несколько раз.<br>
    Если это обычная ф-ия, то так:    
 ```cpp
 void subscriber_fn(){}
@@ -85,6 +85,7 @@ struct subscriber
 };
 subscriber sscrb;
 
+pbl.add_subscriber(std::bind(&subscriber::test0, sscrb)); 
 pbl.add_subscriber(std::bind(&subscriber::test0, sscrb)); 
 ```
     
