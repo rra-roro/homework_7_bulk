@@ -4,7 +4,7 @@
 #include "lib_version.h"
 
 #define PRIVATE_TEST 1
-#include "publisher_unique.h"
+#include "publisher.h"
 
 TEST(version, test1)
 {
@@ -12,7 +12,7 @@ TEST(version, test1)
 }
 
 
-struct publisher : public roro_lib::publisher_unique_mixin<void(void)>
+struct publisher : public roro_lib::publisher_mixin<void(void)>
 {
       void run()
       {
@@ -37,43 +37,65 @@ struct subscriber_functor
 namespace roro_lib
 {
 
-      class PublisherUniqueMixinTest : public testing::Test
+      class PublisherMixinTest : public testing::Test
       {
         public:
             void SetUp() {}
             void TearDown() {}
       };
 
-      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers1)
+      TEST_F(PublisherMixinTest, UniqueAddSubscribers1)
       {
             publisher pbl;
 
-            pbl.add_subscriber(subscriber_fn);                  // 1
+            pbl.add_subscriber(subscriber_fn); // 1
             ASSERT_TRUE(pbl.subscribers.size() == 1);
 
-            pbl.add_subscriber(subscriber_functor());           // 2
+            pbl.add_subscriber(subscriber_functor()); // 2  rvalue - добавляем
             ASSERT_TRUE(pbl.subscribers.size() == 2);
 
             subscriber_functor sf;
 
-            pbl.add_subscriber(sf);                             // 3
+            pbl.add_subscriber(sf); // 3
             ASSERT_TRUE(pbl.subscribers.size() == 3);
 
-            pbl.add_subscriber(sf, &subscriber_functor::test);  // 4
+            pbl.add_subscriber(sf, &subscriber_functor::test); // 4
             ASSERT_TRUE(pbl.subscribers.size() == 4);
 
-            // ----
-            pbl.add_subscriber(subscriber_functor());           // 5  - новый уникальный функтор
-            ASSERT_TRUE(pbl.subscribers.size() == 5);
+            std::function<void(void)> fn1 = subscriber_fn;
+            pbl.add_subscriber(fn1);
+            ASSERT_TRUE(pbl.subscribers.size() == 5); // 5
+
+            pbl.add_subscriber(std::function<void(void)>(subscriber_fn)); // 6 rvalue - добавляем
+            ASSERT_TRUE(pbl.subscribers.size() == 6);
+
 
             // ----
-            pbl.add_subscriber(subscriber_fn);                  // Уже есть в подписчиках
-            pbl.add_subscriber(sf);                             // Уже есть в подписчиках
-            pbl.add_subscriber(sf, &subscriber_functor::test);  // Уже есть в подписчиках
+            pbl.add_subscriber(subscriber_functor()); // 7  rvalue - добавляем повторно
+            ASSERT_TRUE(pbl.subscribers.size() == 7);
 
-            ASSERT_TRUE(pbl.subscribers.size() == 5);
+            pbl.add_subscriber(std::function<void(void)>(subscriber_fn)); // 8 rvalue - добавляем повторно
+            ASSERT_TRUE(pbl.subscribers.size() == 8);
+
+            // ----
+            pbl.add_subscriber(subscriber_fn);                 // Уже есть в подписчиках
+            pbl.add_subscriber(sf);                            // Уже есть в подписчиках
+            pbl.add_subscriber(sf, &subscriber_functor::test); // Уже есть в подписчиках
+
+            std::function<void(void)> fn2;
+            pbl.add_subscriber(fn1); // function == nullptr  - игнорируем
+            pbl.add_subscriber(fn2); // Уже есть в подписчиках
+
+
+            ASSERT_TRUE(pbl.subscribers.size() == 8);
       }
 }
+
+struct subscriber_base0
+{
+      int m[52];
+      void test0(){};
+};
 
 struct subscriber_base1
 {
@@ -94,29 +116,44 @@ struct subscriber_d : subscriber_base2
       void test0(){};
 };
 
-/*
- Подписчики не могут быть типом с Множественным и виртуальным наследованием
-*/
-
+struct subscriber_md : subscriber_base0, subscriber_base1
+{
+      void test0(){};
+};
 
 namespace roro_lib
 {
-      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers2)
+      TEST_F(PublisherMixinTest, UniqueAddSubscribers2)
       {
             publisher pbl;
             subscriber_d sd;
+            subscriber_md md;
 
             pbl.add_subscriber(sd, &subscriber_d::test0);
+            ASSERT_TRUE(pbl.subscribers.size() == 1);
             pbl.add_subscriber(sd, &subscriber_d::test1);
+            ASSERT_TRUE(pbl.subscribers.size() == 2);
             pbl.add_subscriber(sd, &subscriber_d::test2);
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
 
             pbl.add_subscriber(sd, &subscriber_d::subscriber_base1::test0);
+            ASSERT_TRUE(pbl.subscribers.size() == 4);
             pbl.add_subscriber(sd, &subscriber_d::subscriber_base1::test2);
+            ASSERT_TRUE(pbl.subscribers.size() == 5);
 
-            pbl.add_subscriber(sd, &subscriber_d::test0);                    // Уже есть в подписчиках
-            pbl.add_subscriber(sd, &subscriber_d::subscriber_base1::test2);  // Уже есть в подписчиках
+            pbl.add_subscriber(sd, &subscriber_d::test0);                   // Уже есть в подписчиках
+            pbl.add_subscriber(sd, &subscriber_d::subscriber_base1::test2); // Уже есть в подписчиках
 
             ASSERT_TRUE(pbl.subscribers.size() == 5);
+
+            // pbl.add_subscriber(md, &subscriber_md::test0);                // Подписчик напрямую не может быть типом с
+            //                                                                  Множественным и/или виртуальным наследованием
+
+            pbl.add_subscriber(std::bind(&subscriber_md::test0, md)); // Но через bind может
+            ASSERT_TRUE(pbl.subscribers.size() == 6);
+
+            pbl.add_subscriber(std::bind(&subscriber_md::test0, md)); // через bind подписываем многократно
+            ASSERT_TRUE(pbl.subscribers.size() == 7);
       }
 }
 
@@ -140,28 +177,31 @@ struct subscriber_d2 : subscriber_base
 
 namespace roro_lib
 {
-      TEST_F(PublisherUniqueMixinTest, UniqueAddSubscribers3)
+      TEST_F(PublisherMixinTest, UniqueAddSubscribers3)
       {
             publisher pbl;
 
             subscriber_d2 sd1;
             subscriber_d2 sd2;
 
-            
+
             //i_subscriber& is = sd2;
             subscriber_base& sb = sd2;
 
             pbl.add_subscriber(sd1, &subscriber_d2::test0);
+            ASSERT_TRUE(pbl.subscribers.size() == 1);
             pbl.add_subscriber(sd1, &subscriber_d2::test1);
+            ASSERT_TRUE(pbl.subscribers.size() == 2);
             pbl.add_subscriber(sd1, &subscriber_d2::test2);
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
 
             //pbl.add_subscriber(is, &i_subscriber::test0);   // is  - нельзя инстанцировать
             //pbl.add_subscriber(is, &i_subscriber::test1);
             pbl.add_subscriber(sb, &subscriber_d2::test0);
+            ASSERT_TRUE(pbl.subscribers.size() == 4);
             pbl.add_subscriber(sb, &subscriber_d2::test1);
-            //pbl.add_subscriber(sb, &subscriber_d2::test2);  // &subscriber_d2::test2 - обращение к ф-ии что нет в subscriber_base
-
             ASSERT_TRUE(pbl.subscribers.size() == 5);
+            //pbl.add_subscriber(sb, &subscriber_d2::test2);  // &subscriber_d2::test2 - обращение к ф-ии что нет в subscriber_base
       }
 }
 
@@ -174,7 +214,7 @@ struct subscriber_state
 
 namespace roro_lib
 {
-      TEST_F(PublisherUniqueMixinTest, StoreSubscribersByRef)
+      TEST_F(PublisherMixinTest, StoreSubscribersByRef)
       {
             publisher pbl;
 
@@ -187,7 +227,7 @@ namespace roro_lib
             ASSERT_TRUE(sscr.st == 2);
       }
 
-      TEST_F(PublisherUniqueMixinTest, StoreSubscribersByValue)
+      TEST_F(PublisherMixinTest, StoreSubscribersByValue)
       {
             publisher pbl;
 
@@ -202,5 +242,28 @@ namespace roro_lib
             pbl.run();
 
             ASSERT_TRUE(sscr.st == 0);
+      }
+
+      TEST_F(PublisherMixinTest, copy)
+      {
+            std::function<void(void)> fn1 = subscriber_fn;
+            subscriber_functor sf;
+
+            publisher pbl1;
+            pbl1.add_subscriber(subscriber_fn); 
+            pbl1.add_subscriber(subscriber_functor()); 
+            pbl1.add_subscriber(sf); 
+            pbl1.add_subscriber(sf, &subscriber_functor::test);
+            pbl1.add_subscriber(fn1);
+            pbl1.add_subscriber(std::function<void(void)>(subscriber_fn));
+
+            ASSERT_TRUE(pbl1.subscribers.size() == 6);
+
+            publisher pbl2(pbl1);
+            ASSERT_TRUE(pbl2.subscribers.size() == 6);
+
+            publisher pbl3;
+            pbl3 = pbl1;
+            ASSERT_TRUE(pbl3.subscribers.size() == 6);
       }
 }
