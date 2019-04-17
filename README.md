@@ -88,6 +88,15 @@ subscriber sscrb;
 pbl.add_subscriber(std::bind(&subscriber::test0, sscrb)); 
 pbl.add_subscriber(std::bind(&subscriber::test0, sscrb)); 
 ```
-    
+7) В классе **publisher_mixin** так же реализован перехват исключений, которые могут возникнуть у подписчиков<br>
+во время уведомления. Все собранные во время последнего уведомления исключения можно получить в классе наследнике от 
+**publisher_mixin**, через ф-ию:
+```cpp
+std::list<std::runtime_error> notify_exception_list = get_last_notify_exception();
+```
+Если список пуст, то при последнем уведомлении подписчики не бросали исключений.
+
+
+
 Документацию и дополнительное описание проекта можно найти здесь:
 https://rra-roro.github.io/homework_7_bulk

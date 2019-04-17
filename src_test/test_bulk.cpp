@@ -267,3 +267,31 @@ namespace roro_lib
             ASSERT_TRUE(pbl3.subscribers.size() == 6);
       }
 }
+
+struct subscriber_exeption
+{
+      void test1() { throw std::runtime_error("Ex test1()"); };
+      void test2() { throw std::runtime_error("Ex test2()"); };
+      void test3() { throw std::runtime_error("Ex test3()"); };
+};
+
+namespace roro_lib
+{
+      TEST_F(PublisherMixinTest, exeption)
+      {
+            publisher pbl;
+            subscriber_exeption sbscrex;
+
+            pbl.add_subscriber(sbscrex, &subscriber_exeption::test1);
+            pbl.add_subscriber(sbscrex, &subscriber_exeption::test2);
+            pbl.add_subscriber(sbscrex, &subscriber_exeption::test3);
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
+
+            ASSERT_TRUE(pbl.get_last_notify_exception().size() == 0);
+
+            pbl.run();
+
+            ASSERT_TRUE(pbl.get_last_notify_exception().size() == 3);
+      }
+}
+

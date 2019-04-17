@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <unordered_map>
+#include <list>
 #include <functional>
 #include <type_traits>
 
@@ -143,7 +144,7 @@ namespace roro_lib
             }
 
             template <typename T,
-                      typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr>
+                typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr>
             void add_subscriber(const T& obj)
             {
                   add_subscriber(std::function<R(Args...)>(obj));
@@ -152,10 +153,28 @@ namespace roro_lib
         protected:
             void notify(Args... args)
             {
+                  notify_exception_list.clear();
+
                   for (auto& subscriber : subscribers)
                   {
-                        subscriber.second(args...);
+                        try
+                        {
+                              subscriber.second(args...);
+                        }
+                        catch (const std::exception& ex)
+                        {
+                              notify_exception_list.emplace_back(ex.what());
+                        }
+                        catch (...)
+                        {
+                              notify_exception_list.emplace_back("Unknown exception.");
+                        }
                   }
+            }
+
+            const std::list<std::runtime_error>& get_last_notify_exception()
+            {
+                  return notify_exception_list;
             }
 
             // non-virtual protected destructor special for mixin
@@ -163,6 +182,7 @@ namespace roro_lib
 
         private:
             std::unordered_map<internal::key, std::function<R(Args...)>> subscribers;
+            std::list<std::runtime_error> notify_exception_list;
 
             // добавляем указатель на ф-ию
             template <typename T>
@@ -248,6 +268,7 @@ namespace roro_lib
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
             FRIEND_TEST(PublisherMixinTest, copy);
+            FRIEND_TEST(PublisherMixinTest, exeption);            
 #endif
       };
 }
