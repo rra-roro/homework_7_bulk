@@ -250,9 +250,9 @@ namespace roro_lib
             subscriber_functor sf;
 
             publisher pbl1;
-            pbl1.add_subscriber(subscriber_fn); 
-            pbl1.add_subscriber(subscriber_functor()); 
-            pbl1.add_subscriber(sf); 
+            pbl1.add_subscriber(subscriber_fn);
+            pbl1.add_subscriber(subscriber_functor());
+            pbl1.add_subscriber(sf);
             pbl1.add_subscriber(sf, &subscriber_functor::test);
             pbl1.add_subscriber(fn1);
             pbl1.add_subscriber(std::function<void(void)>(subscriber_fn));
@@ -295,3 +295,41 @@ namespace roro_lib
       }
 }
 
+struct subscriber_taged
+{
+      int i = 0;
+      subscriber_taged(int arg) : i(arg){};
+      void test1() { };
+      void test2() { };
+      void test3() { };
+
+};
+
+
+namespace roro_lib
+{
+      TEST_F(PublisherMixinTest, DelSubscribers)
+      {
+            publisher pbl;
+            publisher::subscriber_handle handle1 = pbl.add_subscriber(subscriber_taged(1), &subscriber_taged::test1);
+            publisher::subscriber_handle handle2 = pbl.add_subscriber(subscriber_taged(2), &subscriber_taged::test2);
+            publisher::subscriber_handle handle3 = pbl.add_subscriber(subscriber_taged(3), &subscriber_taged::test3);
+            publisher::subscriber_handle handle4 = pbl.add_subscriber(subscriber_taged(4), &subscriber_taged::test1);
+            publisher::subscriber_handle handle5 = pbl.add_subscriber(subscriber_taged(5), &subscriber_taged::test2);
+            publisher::subscriber_handle handle6 = pbl.add_subscriber(subscriber_taged(6), &subscriber_taged::test3);
+            ASSERT_TRUE(pbl.subscribers.size() == 6);
+
+            pbl.del_subscriber(handle3);
+            pbl.del_subscriber(handle4);
+
+            ASSERT_TRUE(pbl.subscribers.size() == 4);
+
+            pbl.del_subscriber(handle3);
+            pbl.del_subscriber(handle4);
+
+            ASSERT_TRUE(pbl.subscribers.size() == 4);
+
+            pbl.del_all_subscribers();
+            ASSERT_TRUE(pbl.subscribers.size() == 0);
+      }
+}

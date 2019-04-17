@@ -102,52 +102,90 @@ namespace roro_lib
             static_assert(sizeof...(Args) < 20,
                 "the subscriber must have less 20 arguments");
 
+            using container_subscribers_t = std::unordered_map<internal::key, std::function<R(Args...)>>;
+            using subscribers_iterator = typename container_subscribers_t::iterator;
+            using subscribers_reference = typename container_subscribers_t::reference;
+            using subscribers_value_type = typename container_subscribers_t::value_type;
+            using subscribers_pointer = typename container_subscribers_t::pointer;
+
+            class subscriber_handle
+            {
+                  subscribers_value_type null_pair = { { nullptr, nullptr }, nullptr };
+                  subscribers_reference ref;
+
+                  template <typename>
+                  friend class publisher_mixin;
+
+              public:
+                  subscriber_handle() : ref(null_pair){};
+                  subscriber_handle(const std::pair<subscribers_iterator, bool>& arg) : ref(*arg.first){};
+            };
+
         public:
             template <typename F,
                 typename std::enable_if_t<std::is_pointer_v<F> &&
                                           std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
-            void add_subscriber(F fn)
+            subscriber_handle add_subscriber(F fn)
             {
                   static_assert(test_arg_subscriber_v<F>,
                       "the signature of the subscriber function must match the signature declared by the publisher");
 
-                  add_subscriber_internal(fn);
+                  return add_subscriber_internal(fn);
             }
 
             template <typename T, typename MF,
                 typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr>
-            void add_subscriber(T&& obj, MF mfn)
+            subscriber_handle add_subscriber(T&& obj, MF mfn)
             {
                   static_assert(test_arg_subscriber_v<MF>,
                       "the signature of the subscriber member function must match the signature declared by the publisher");
 
-                  add_subscriber_internal(std::forward<T>(obj), mfn);
+                  return add_subscriber_internal(std::forward<T>(obj), mfn);
             }
 
             template <typename Ref_,
                 typename T = std::remove_reference_t<Ref_>,
                 typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
-            void add_subscriber(Ref_&& obj)
+            subscriber_handle add_subscriber(Ref_&& obj)
             {
                   if constexpr (std::is_same_v<T, std::function<R(Args...)>>)
                   {
                         if (obj != nullptr) // function != nullptr
-                              add_subscriber_internal(std::forward<Ref_>(obj));
+                              return add_subscriber_internal(std::forward<Ref_>(obj));
+                        else
+                              return {};
                   }
                   else
                   {
                         static_assert(test_arg_subscriber_v<decltype(&T::operator())>,
                             "the signature of the subscriber functor must match the signature declared by the publisher");
 
-                        add_subscriber(std::forward<Ref_>(obj), &T::operator());
+                        return add_subscriber(std::forward<Ref_>(obj), &T::operator());
                   }
             }
 
             template <typename T,
                 typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr>
-            void add_subscriber(const T& obj)
+            subscriber_handle add_subscriber(const T& obj)
             {
-                  add_subscriber(std::function<R(Args...)>(obj));
+                  return add_subscriber(std::function<R(Args...)>(obj));
+            }
+
+            void del_subscriber(const subscriber_handle& handle)
+            {
+                  for (auto it = subscribers.begin(); it != subscribers.end(); ++it)
+                  {
+                        if (&*it == &handle.ref)
+                        {
+                              subscribers.erase(it);
+                              return;
+                        }
+                  }
+            }
+
+            void del_all_subscribers()
+            {
+                  subscribers.clear();
             }
 
         protected:
@@ -181,21 +219,22 @@ namespace roro_lib
             ~publisher_mixin(){};
 
         private:
-            std::unordered_map<internal::key, std::function<R(Args...)>> subscribers;
+            container_subscribers_t subscribers;
+
             std::list<std::runtime_error> notify_exception_list;
 
             // добавляем указатель на ф-ию
             template <typename T>
-            constexpr void add_subscriber_internal(const T& fn)
+            constexpr subscriber_handle add_subscriber_internal(const T& fn)
             {
-                  subscribers.insert({ { fn }, fn });
+                  return subscribers.insert({ { fn }, fn });
             }
 
             // добавляем function
             template <typename Ref_,
                 typename T = std::remove_reference_t<Ref_>,
                 typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr>
-            constexpr void add_subscriber_internal(Ref_&& fn)
+            constexpr subscriber_handle add_subscriber_internal(Ref_&& fn)
             {
                   internal::key fn_key(fn);
 
@@ -204,7 +243,7 @@ namespace roro_lib
                   else
                         fn_key.rvalue = false;
 
-                  subscribers.insert({ fn_key, fn });
+                  return subscribers.insert({ fn_key, fn });
             }
 
             // добавляем прочие функторы
@@ -212,7 +251,7 @@ namespace roro_lib
                 typename T,
                 typename F = R (T::*)(Args...),
                 std::size_t... PhNumber>
-            constexpr void add_subscriber_internal(T&& obj, F fn)
+            constexpr subscriber_handle add_subscriber_internal(T&& obj, F fn)
             {
                   if constexpr (I < sizeof...(Args))
                   {
@@ -221,9 +260,9 @@ namespace roro_lib
                   else if constexpr (sizeof...(Args) == 0)
                   {
                         if constexpr (std::is_rvalue_reference_v<T&&>)
-                              subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj) });
+                              return subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, obj) });
                         else
-                              subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, std::ref(obj)) });
+                              return subscribers.insert({ { std::forward<T>(obj), fn }, std::bind(fn, std::ref(obj)) });
                   }
                   else
                   {
@@ -232,10 +271,10 @@ namespace roro_lib
                             _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
 
                         if constexpr (std::is_rvalue_reference_v<T&&>)
-                              subscribers.insert({ { std::forward<T>(obj), fn },
+                              return subscribers.insert({ { std::forward<T>(obj), fn },
                                   std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
                         else
-                              subscribers.insert({ { std::forward<T>(obj), fn },
+                              return subscribers.insert({ { std::forward<T>(obj), fn },
                                   std::bind(fn, std::ref(obj), std::get<PhNumber>(placeholders_tuple)...) });
                   }
             }
@@ -268,7 +307,8 @@ namespace roro_lib
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
             FRIEND_TEST(PublisherMixinTest, copy);
-            FRIEND_TEST(PublisherMixinTest, exeption);            
+            FRIEND_TEST(PublisherMixinTest, exeption);
+            FRIEND_TEST(PublisherMixinTest, DelSubscribers);
 #endif
       };
 }

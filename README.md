@@ -96,7 +96,16 @@ std::list<std::runtime_error> notify_exception_list = get_last_notify_exception(
 ```
 Если список пуст, то при последнем уведомлении подписчики не бросали исключений.
 
-
+8) В классе **publisher_mixin** так же добавлена возможность отписаться от уведомления.
+Для этого функция добавляения подписчика возвращает дескриптор, который затем нужно передать ф-ии удаления подписчика:
+```cpp
+auto handle = pbl.add_subscriber(subscriber_taged(1), &subscriber_taged::test1);
+pbl.del_subscriber(handle);
+```
+Можно так же отписаться от всех подписчиков:
+```cpp
+pbl.del_all_subscribers();
+```
 
 Документацию и дополнительное описание проекта можно найти здесь:
 https://rra-roro.github.io/homework_7_bulk
