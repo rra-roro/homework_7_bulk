@@ -57,8 +57,8 @@ pbl.add_subscriber(sscr, &subscriber::test);  // подписываем subscrib
     только один раз.<br><br>
     Для достижения этого пришлось пойти на ряд жертв, в частности, подписчики этого <br>
     класса *по умолчанию* не могут иметь множественное и/или виртуальное наследование.<br><br>
-    Но если хочется, то все эти ограничения можно снять.
-    Если мы хотим добавить подписчика с множественным и виртуальным наследованием, то делаем так:
+    Но если хочется, то все эти ограничения можно снять.<br>
+    Если мы хотим добавить подписчика с множественным и виртуальным наследованием, то делаем так:<br>
 ```cpp
 struct subscriber_md : subscriber_base1, subscriber_base2
 {
@@ -67,20 +67,17 @@ struct subscriber_md : subscriber_base1, subscriber_base2
 
 publisher pbl;
 pbl.add_subscriber(std::bind(&subscriber_md::test2, md));
-
+``` 
 ```
-
     При желании, мы так же можем подписать один и тот же функциональный объектнесколько раз.<br>
-    Если это обычная ф-ия, то так:
+    Если это обычная ф-ия, то так:<br>
 ```cpp
 void subscriber_fn(){}
 
 pbl.add_subscriber(std::function<void(void)>(subscriber_fn));
 pbl.add_subscriber(std::function<void(void)>(subscriber_fn));
-
 ```
-
-    Если это ф-ия член класса, то так:
+    Если это ф-ия член класса, то так:<br>
 ```cpp
 struct subscriber
 {
