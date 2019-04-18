@@ -8,7 +8,7 @@ namespace roro_lib
 {
       namespace internal
       {
-            struct key
+            struct key_subscriber
             {
                   using Facke = struct
                   {
@@ -18,48 +18,54 @@ namespace roro_lib
                   std::pair<void*, fn_mem_t> key_value;
                   bool rvalue;
 
-                  key() = delete;
+                  key_subscriber() = delete;
 
 #if __GNUG__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
-                  template <typename T, typename FM, typename FMx = void (Facke::*)(void),
-                      typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
-                  key(T&& obj, FM fn) : key_value{ static_cast<void*>(&obj),
-                                              reinterpret_cast<FMx>(fn) },
-                                        rvalue(true)
+                  template <typename T, typename FM,
+                            typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr
+                  >
+                  key_subscriber(T&& obj, FM fn) : rvalue(true)
                   {
+                        key_value.first = static_cast<void*>(&obj);
+                        key_value.second = reinterpret_cast<FMx>(fn);
                   }
 
-                  template <typename T, typename FM, typename FMx = void (Facke::*)(void),
-                      typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
-                  key(T&& obj, FM fn) : key_value{ static_cast<void*>(&obj),
-                                              reinterpret_cast<FMx>(fn) },
-                                        rvalue(false)
+                  template <typename T, typename FM,
+                            typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr
+                  >
+                  key_subscriber(T&& obj, FM fn) : rvalue(false)
                   {
+                        key_value.first = static_cast<void*>(&obj);
+                        key_value.second = reinterpret_cast<FMx>(fn);
                   }
 
 #if __GNUG__
 #pragma GCC diagnostic pop
 #endif
                   template <typename T>
-                  key(const T& obj) : key_value{ static_cast<void*>(const_cast<T*>(&obj)), nullptr },
-                                      rvalue(false)
+                  key_subscriber(const T& obj) : rvalue(false)
+                  {
+                        key_value.first = static_cast<void*>(const_cast<T*>(&obj));
+                        key_value.second = nullptr;
+                  }
+
+                  key_subscriber(const key_subscriber& key_arg) : rvalue(key_arg.rvalue),
+                                                                  key_value(key_arg.key_value)
                   {
                   }
 
-                  key(const key& key_arg) : key_value(key_arg.key_value), rvalue(key_arg.rvalue)
-                  {
-                  }
-
-                  key(key&& key_arg) : rvalue(key_arg.rvalue)
+                  key_subscriber(key_subscriber&& key_arg) : rvalue(key_arg.rvalue)
                   {
                         key_value.swap(key_arg.key_value);
                   }
             };
 
-            bool operator==(const key& arg1, const key& arg2)
+            bool operator==(const key_subscriber& arg1, const key_subscriber& arg2)
             {
                   if (arg1.rvalue == true && arg2.rvalue == true)
                   {
@@ -77,14 +83,14 @@ namespace std
 
       */
       template <>
-      struct hash<roro_lib::internal::key>
+      struct hash<roro_lib::internal::key_subscriber>
       {
-            using argument_t = roro_lib::internal::key;
+            using argument_t = roro_lib::internal::key_subscriber;
             using result_t = std::intptr_t;
 
             result_t operator()(const argument_t& key_arg) const noexcept
             {
-                  return std::hash<std::size_t>{}(reinterpret_cast<std::intptr_t>(const_cast<void*>(key_arg.key_value.first)));
+                  return std::hash<std::intptr_t>{}(reinterpret_cast<std::intptr_t>(const_cast<void*>(key_arg.key_value.first)));
             }
       };
 }
@@ -92,17 +98,42 @@ namespace std
 
 namespace roro_lib
 {
+      template <typename, typename = void>
+      struct notify_ret_values_mixin;
+
+      template <typename R, typename... Args>
+      struct notify_ret_values_mixin<R(Args...),
+                                     typename std::enable_if_t<std::is_void_v<R>>>
+      {
+      };
+
+      template <typename R, typename... Args>
+      struct notify_ret_values_mixin<R(Args...),
+                                     typename std::enable_if_t<!std::is_void_v<R>>>
+      {
+            using subscribers_reference = std::pair<internal::key_subscriber, std::function<R(Args...)>>;
+            using subscribers_return_values_t = std::list<std::pair<R, subscribers_reference>>;
+
+            subscribers_return_values_t subscribers_return_list;
+
+            subscribers_return_values_t& get_last_subscribers_ret_values()
+            {
+                  return subscribers_return_list;
+            }
+      };
 
       template <typename>
       class publisher_mixin;
 
       template <typename R, typename... Args>
-      class publisher_mixin<R(Args...)>
+      class publisher_mixin<R(Args...)> : public notify_ret_values_mixin<R(Args...)>
       {
             static_assert(sizeof...(Args) < 20,
                 "the subscriber must have less 20 arguments");
 
-            using container_subscribers_t = std::unordered_map<internal::key, std::function<R(Args...)>>;
+            using notify_ret_values_t = notify_ret_values_mixin<R(Args...)>;
+            using container_subscribers_t = std::unordered_map<internal::key_subscriber, std::function<R(Args...)>>;
+            using subscribers_return_t = R;
             using subscribers_iterator = typename container_subscribers_t::iterator;
             using subscribers_reference = typename container_subscribers_t::reference;
             using subscribers_value_type = typename container_subscribers_t::value_type;
@@ -197,7 +228,13 @@ namespace roro_lib
                   {
                         try
                         {
-                              subscriber.second(args...);
+                              if constexpr (!std::is_void_v<R>)
+                              {
+                                    R resoult = subscriber.second(args...);
+                                    notify_ret_values_t::subscribers_return_list.emplace_back(resoult, subscriber);
+                              }
+                              else
+                                    subscriber.second(args...);
                         }
                         catch (const std::exception& ex)
                         {
@@ -220,8 +257,8 @@ namespace roro_lib
 
         private:
             container_subscribers_t subscribers;
-
             std::list<std::runtime_error> notify_exception_list;
+
 
             // добавляем указатель на ф-ию
             template <typename T>
@@ -236,7 +273,7 @@ namespace roro_lib
                 typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr>
             constexpr subscriber_handle add_subscriber_internal(Ref_&& fn)
             {
-                  internal::key fn_key(fn);
+                  internal::key_subscriber fn_key(fn);
 
                   if constexpr (std::is_rvalue_reference_v<Ref_&&>)
                         fn_key.rvalue = true;
@@ -311,4 +348,5 @@ namespace roro_lib
             FRIEND_TEST(PublisherMixinTest, DelSubscribers);
 #endif
       };
+
 }

@@ -11,31 +11,30 @@ TEST(version, test1)
       ASSERT_TRUE(version() > 0);
 }
 
-
-struct publisher : public roro_lib::publisher_mixin<void(void)>
-{
-      void run()
-      {
-            notify();
-      };
-};
-
-
-void subscriber_fn()
-{
-}
-
-struct subscriber_functor
-{
-      void test(){};
-
-      void operator()()
-      {
-      }
-};
-
 namespace roro_lib
 {
+      struct publisher : public publisher_mixin<void(void)>
+      {
+            void run()
+            {
+                  notify();
+            };
+      };
+
+
+      void subscriber_fn()
+      {
+      }
+
+      struct subscriber_functor
+      {
+            void test(){};
+
+            void operator()()
+            {
+            }
+      };
+
 
       class PublisherMixinTest : public testing::Test
       {
@@ -89,40 +88,38 @@ namespace roro_lib
 
             ASSERT_TRUE(pbl.subscribers.size() == 8);
       }
-}
 
-struct subscriber_base0
-{
-      int m[52];
-      void test0(){};
-};
 
-struct subscriber_base1
-{
-      int m[30];
-      void test0(){};
-      void test1(){};
-      void test2(){};
-};
+      struct subscriber_base0
+      {
+            int m[52];
+            void test0(){};
+      };
 
-struct subscriber_base2 : subscriber_base1
-{
-      int m[256];
-      void test2(){};
-};
+      struct subscriber_base1
+      {
+            int m[30];
+            void test0(){};
+            void test1(){};
+            void test2(){};
+      };
 
-struct subscriber_d : subscriber_base2
-{
-      void test0(){};
-};
+      struct subscriber_base2 : subscriber_base1
+      {
+            int m[256];
+            void test2(){};
+      };
 
-struct subscriber_md : subscriber_base0, subscriber_base1
-{
-      void test0(){};
-};
+      struct subscriber_d : subscriber_base2
+      {
+            void test0(){};
+      };
 
-namespace roro_lib
-{
+      struct subscriber_md : subscriber_base0, subscriber_base1
+      {
+            void test0(){};
+      };
+
       TEST_F(PublisherMixinTest, UniqueAddSubscribers2)
       {
             publisher pbl;
@@ -155,28 +152,26 @@ namespace roro_lib
             pbl.add_subscriber(std::bind(&subscriber_md::test0, md)); // через bind подписываем многократно
             ASSERT_TRUE(pbl.subscribers.size() == 7);
       }
-}
 
-struct i_subscriber
-{
-      virtual void test0() = 0;
-      virtual void test1() = 0;
-};
 
-struct subscriber_base : i_subscriber
-{
-      void test0(){};
-      void test1(){};
-      virtual void test2(){};
-};
+      struct i_subscriber
+      {
+            virtual void test0() = 0;
+            virtual void test1() = 0;
+      };
 
-struct subscriber_d2 : subscriber_base
-{
-      void test2(){};
-};
+      struct subscriber_base : i_subscriber
+      {
+            void test0(){};
+            void test1(){};
+            virtual void test2(){};
+      };
 
-namespace roro_lib
-{
+      struct subscriber_d2 : subscriber_base
+      {
+            void test2(){};
+      };
+
       TEST_F(PublisherMixinTest, UniqueAddSubscribers3)
       {
             publisher pbl;
@@ -203,17 +198,15 @@ namespace roro_lib
             ASSERT_TRUE(pbl.subscribers.size() == 5);
             //pbl.add_subscriber(sb, &subscriber_d2::test2);  // &subscriber_d2::test2 - обращение к ф-ии что нет в subscriber_base
       }
-}
 
-struct subscriber_state
-{
-      int st = 0;
-      void test() { ++st; };
-      void operator()() { ++st; };
-};
 
-namespace roro_lib
-{
+      struct subscriber_state
+      {
+            int st = 0;
+            void test() { ++st; };
+            void operator()() { ++st; };
+      };
+
       TEST_F(PublisherMixinTest, StoreSubscribersByRef)
       {
             publisher pbl;
@@ -266,17 +259,15 @@ namespace roro_lib
             pbl3 = pbl1;
             ASSERT_TRUE(pbl3.subscribers.size() == 6);
       }
-}
 
-struct subscriber_exeption
-{
-      void test1() { throw std::runtime_error("Ex test1()"); };
-      void test2() { throw std::runtime_error("Ex test2()"); };
-      void test3() { throw std::runtime_error("Ex test3()"); };
-};
 
-namespace roro_lib
-{
+      struct subscriber_exeption
+      {
+            void test1() { throw std::runtime_error("Ex test1()"); };
+            void test2() { throw std::runtime_error("Ex test2()"); };
+            void test3() { throw std::runtime_error("Ex test3()"); };
+      };
+
       TEST_F(PublisherMixinTest, exeption)
       {
             publisher pbl;
@@ -293,21 +284,18 @@ namespace roro_lib
 
             ASSERT_TRUE(pbl.get_last_notify_exception().size() == 3);
       }
-}
-
-struct subscriber_taged
-{
-      int i = 0;
-      subscriber_taged(int arg) : i(arg){};
-      void test1() { };
-      void test2() { };
-      void test3() { };
-
-};
 
 
-namespace roro_lib
-{
+      struct subscriber_taged
+      {
+            int i = 0;
+            subscriber_taged(int arg) : i(arg){};
+            void test1(){};
+            void test2(){};
+            void test3(){};
+      };
+
+
       TEST_F(PublisherMixinTest, DelSubscribers)
       {
             publisher pbl;
@@ -332,4 +320,13 @@ namespace roro_lib
             pbl.del_all_subscribers();
             ASSERT_TRUE(pbl.subscribers.size() == 0);
       }
+
+      struct publisher_not_void : public publisher_mixin<int(int,int)>
+      {
+            void run()
+            {
+                  notify(1,1);
+            };
+      };
+
 }
