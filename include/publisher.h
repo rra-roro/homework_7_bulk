@@ -34,7 +34,7 @@ namespace roro_lib
                         key_value.first = static_cast<void*>(&obj);
 
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
-                              key_value.second = nullptr;
+                              key_value.second = fn;
                         else
                               key_value.second = reinterpret_cast<FMx>(fn);
                   }
@@ -48,7 +48,7 @@ namespace roro_lib
                         key_value.first = static_cast<void*>(&obj);
 
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
-                              key_value.second = nullptr;
+                              key_value.second = fn;
                         else
                               key_value.second = reinterpret_cast<FMx>(fn);
                   }
