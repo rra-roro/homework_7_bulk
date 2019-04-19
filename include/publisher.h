@@ -53,7 +53,7 @@ namespace roro_lib
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
                   key_subscriber(F obj) : rvalue(false)
                   {
-                        key_value.first = static_cast<void*>(obj);
+                        key_value.first = reinterpret_cast<void*>(obj);
                         key_value.second = nullptr;
                   }
 
@@ -66,7 +66,7 @@ namespace roro_lib
                   }
 
                   key_subscriber(const key_subscriber& key_arg) noexcept: rvalue(key_arg.rvalue),
-                                                                  key_value(key_arg.key_value)
+                                                                          key_value(key_arg.key_value)
                   {
                   }
 
