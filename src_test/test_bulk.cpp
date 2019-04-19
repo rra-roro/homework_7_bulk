@@ -22,17 +22,12 @@ namespace roro_lib
       };
 
 
-      void subscriber_fn()
-      {
-      }
+      void subscriber_fn(){}
 
       struct subscriber_functor
       {
             void test(){};
-
-            void operator()()
-            {
-            }
+            void operator()(){};
       };
 
 
@@ -47,43 +42,43 @@ namespace roro_lib
       {
             publisher pbl;
 
-            pbl.add_subscriber(subscriber_fn); // 1
+            pbl.add_subscriber(subscriber_fn); 
             ASSERT_TRUE(pbl.subscribers.size() == 1);
 
-            pbl.add_subscriber(subscriber_functor()); // 2  rvalue - добавляем
+            pbl.add_subscriber(subscriber_functor());                    // rvalue - добавляем
             ASSERT_TRUE(pbl.subscribers.size() == 2);
 
             subscriber_functor sf;
 
-            pbl.add_subscriber(sf); // 3
+            pbl.add_subscriber(sf); 
             ASSERT_TRUE(pbl.subscribers.size() == 3);
 
-            pbl.add_subscriber(sf, &subscriber_functor::test); // 4
+            pbl.add_subscriber(sf, &subscriber_functor::test); 
             ASSERT_TRUE(pbl.subscribers.size() == 4);
 
             std::function<void(void)> fn1 = subscriber_fn;
             pbl.add_subscriber(fn1);
-            ASSERT_TRUE(pbl.subscribers.size() == 5); // 5
+            ASSERT_TRUE(pbl.subscribers.size() == 5); 
 
-            pbl.add_subscriber(std::function<void(void)>(subscriber_fn)); // 6 rvalue - добавляем
+            pbl.add_subscriber(std::function<void(void)>(subscriber_fn));  //  rvalue - добавляем
             ASSERT_TRUE(pbl.subscribers.size() == 6);
 
 
             // ----
-            pbl.add_subscriber(subscriber_functor()); // 7  rvalue - добавляем повторно
+            pbl.add_subscriber(subscriber_functor());                      //  rvalue - добавляем повторно
             ASSERT_TRUE(pbl.subscribers.size() == 7);
 
-            pbl.add_subscriber(std::function<void(void)>(subscriber_fn)); // 8 rvalue - добавляем повторно
+            pbl.add_subscriber(std::function<void(void)>(subscriber_fn)); //   rvalue - добавляем повторно
             ASSERT_TRUE(pbl.subscribers.size() == 8);
 
             // ----
-            pbl.add_subscriber(subscriber_fn);                 // Уже есть в подписчиках
-            pbl.add_subscriber(sf);                            // Уже есть в подписчиках
-            pbl.add_subscriber(sf, &subscriber_functor::test); // Уже есть в подписчиках
+            pbl.add_subscriber(subscriber_fn);                            // Уже есть в подписчиках
+            pbl.add_subscriber(sf);                                       // Уже есть в подписчиках
+            pbl.add_subscriber(sf, &subscriber_functor::test);            // Уже есть в подписчиках
 
             std::function<void(void)> fn2;
-            pbl.add_subscriber(fn1); // function == nullptr  - игнорируем
-            pbl.add_subscriber(fn2); // Уже есть в подписчиках
+            pbl.add_subscriber(fn1);                 // function == nullptr  - игнорируем
+            pbl.add_subscriber(fn2);                 // Уже есть в подписчиках
 
 
             ASSERT_TRUE(pbl.subscribers.size() == 8);
@@ -321,12 +316,64 @@ namespace roro_lib
             ASSERT_TRUE(pbl.subscribers.size() == 0);
       }
 
-      struct publisher_not_void : public publisher_mixin<int(int,int)>
+
+      template <typename Base = publisher_mixin<int(int, int)>>
+      struct publisher_not_void : public Base
       {
-            void run()
+            using Base::notify;
+            using Base::get_fn_by_handle;
+            using Base::get_last_notify_exception;
+
+            using notify_ret_t = std::invoke_result_t<decltype(&Base::notify), Base, int, int>;
+
+            notify_ret_t retvs;
+
+            int run()
             {
-                  notify(1,1);
+                  int sum = 0;
+                  retvs = notify(1, 1);
+
+                  for (auto& retv : retvs)
+                  {
+                        sum += retv.first;                        
+                  }
+                  return sum;
             };
       };
 
+      int fn1(int a1, int a2)
+      {
+            return a1 + a2;
+      }
+
+      int fn2(int a1, int a2)
+      {
+            return a1 + a2 +1;
+      }
+
+      int fn3(int a1, int a2)
+      {
+            return a1 + a2 + 3;
+      }
+
+      TEST_F(PublisherMixinTest, NotifiRetValues)
+      {
+            publisher_not_void pbl;
+            pbl.add_subscriber(fn1);
+            pbl.add_subscriber(fn2);
+            pbl.add_subscriber(fn3);
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
+
+            pbl.add_subscriber(fn1);
+            pbl.add_subscriber(fn2);
+            pbl.add_subscriber(fn3);
+            ASSERT_TRUE(pbl.subscribers.size() == 3);
+
+            int sum = pbl.run();
+
+            ASSERT_TRUE(pbl.retvs.size() == 3);
+            ASSERT_TRUE(sum == 10);
+      }
+
 }
+ 
