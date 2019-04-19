@@ -32,7 +32,11 @@ namespace roro_lib
                   key_subscriber(T&& obj, FM fn) : rvalue(true)
                   {
                         key_value.first = static_cast<void*>(&obj);
-                        key_value.second = (fn != nullptr)? reinterpret_cast<FMx>(fn) : nullptr;
+
+                        if constexpr (std::is_same_v<FM, std::nullptr_t>)
+                              key_value.second = nullptr;
+                        else
+                              key_value.second = reinterpret_cast<FMx>(fn);
                   }
 
                   template <typename T, typename FM,
@@ -42,7 +46,11 @@ namespace roro_lib
                   key_subscriber(T&& obj, FM fn) : rvalue(false)
                   {
                         key_value.first = static_cast<void*>(&obj);
-                        key_value.second = (fn != nullptr)? reinterpret_cast<FMx>(fn) : nullptr;
+
+                        if constexpr (std::is_same_v<FM, std::nullptr_t>)
+                              key_value.second = nullptr;
+                        else
+                              key_value.second = reinterpret_cast<FMx>(fn);
                   }
 
 #if __GNUG__
