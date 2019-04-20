@@ -12,7 +12,7 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-8
+      - g++-8.3
       - doxygen
 
 before_script:
