@@ -29,10 +29,10 @@ namespace roro_lib
 
                   key_subscriber() = delete;
 
-#if __GNUG__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-#endif
+//#if __GNUG__
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wcast-function-type"
+//#endif
                   template <typename T, typename FM,
                       typename FMx = void (Facke::*)(void),
                       typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
@@ -59,9 +59,9 @@ namespace roro_lib
                               key_value.second = reinterpret_cast<FMx>(fn);      //  allowed expression C++17 [8.2.10/10]
                   }
 
-#if __GNUG__
-#pragma GCC diagnostic pop
-#endif
+//#if __GNUG__
+//#pragma GCC diagnostic pop
+//#endif
                   template <typename F,
                       typename std::enable_if_t<std::is_pointer_v<F> &&
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
