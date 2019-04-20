@@ -321,12 +321,11 @@ namespace roro_lib
       template <typename Base = publisher_mixin<int(int, int)>>
       struct publisher_not_void : public Base
       {
-        protected:
             using Base::notify;
             using Base::get_fn_by_handle;
             using Base::get_last_notify_exception;
        
-            using notify_ret_t = std::invoke_result_t<decltype(&Base::notify), Base, int, int>;
+            using notify_ret_t = std::invoke_result_t<decltype(&publisher_not_void::notify), Base, int, int>;
 
         public:
             notify_ret_t retvs;

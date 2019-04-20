@@ -17,7 +17,7 @@ namespace roro_lib
                   using fn_mem_t = void (Facke::*)(void);
 
                   bool rvalue;
-                  std::pair<void*, fn_mem_t> key_value;                 
+                  std::pair<const void*, fn_mem_t> key_value;                 
 
                   key_subscriber() = delete;
 
@@ -69,7 +69,7 @@ namespace roro_lib
                             typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr>
                   key_subscriber(const T& obj) : rvalue(false)
                   {
-                        key_value.first = static_cast<void*>(const_cast<T*>(&obj));
+                        key_value.first = static_cast<const void*>(&obj);
                         key_value.second = nullptr;
                   }
 
@@ -109,9 +109,9 @@ namespace std
             using argument_t = roro_lib::internal::key_subscriber;
             using result_t = std::intptr_t;
 
-            std::intptr_t intptr_cast(void* const ptr) const noexcept
+            std::intptr_t intptr_cast(const void* const ptr) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(const_cast<void*>(ptr));
+                  return reinterpret_cast<std::intptr_t>(ptr);
             }
 
             result_t operator()(const argument_t& key_arg) const noexcept
