@@ -87,10 +87,19 @@ namespace roro_lib
                   }
 
                   key_subscriber(key_subscriber&& key_arg) noexcept : rvalue(key_arg.rvalue),
-                                                                      key_type(key_arg.key_type)
-                  {
-                        key_value.swap(key_arg.key_value);
+                                                                      key_type(key_arg.key_type),
+                                                                      key_value(std::move(key_arg.key_value))
+                  {                        
                   }
+
+                  key_subscriber& operator=(key_subscriber&& key_arg) noexcept
+                  {
+                        rvalue = key_arg.rvalue;
+                        key_type = key_arg.key_type;
+                        key_value = std::move(key_arg.key_value);
+                        return *this;
+                  }
+
             };
 
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
@@ -100,8 +109,7 @@ namespace roro_lib
                   {
                         return false;
                   }
-                  else
-                  if (arg1.rvalue == true && arg2.rvalue == true)
+                  else if (arg1.rvalue == true && arg2.rvalue == true)
                   {
                         return false;
                   }
@@ -142,6 +150,7 @@ namespace std
                         return std::hash<std::intptr_t>{}(intptr_cast(std::get<ptr_t::fun_pointer>(key_arg.key_value.first)));
             }
       };
+
 }
 
 
@@ -397,10 +406,10 @@ namespace roro_lib
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
             FRIEND_TEST(PublisherMixinTest, copy);
+            FRIEND_TEST(PublisherMixinTest, move);            
             FRIEND_TEST(PublisherMixinTest, exeption);
             FRIEND_TEST(PublisherMixinTest, DelSubscribers);
             FRIEND_TEST(PublisherMixinTest, NotifiRetValues);
 #endif
       };
-
 }

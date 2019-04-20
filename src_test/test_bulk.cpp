@@ -255,6 +255,28 @@ namespace roro_lib
             ASSERT_TRUE(pbl3.subscribers.size() == 6);
       }
 
+      TEST_F(PublisherMixinTest, move)
+      {
+            std::function<void(void)> fn1 = subscriber_fn;
+            subscriber_functor sf;
+
+            publisher pbl1;
+            pbl1.add_subscriber(subscriber_fn);
+            pbl1.add_subscriber(subscriber_functor());
+            pbl1.add_subscriber(sf);
+            pbl1.add_subscriber(sf, &subscriber_functor::test);
+            pbl1.add_subscriber(fn1);
+            pbl1.add_subscriber(std::function<void(void)>(subscriber_fn));
+
+            ASSERT_TRUE(pbl1.subscribers.size() == 6);
+
+            publisher pbl2(std::move(pbl1));
+            ASSERT_TRUE(pbl2.subscribers.size() == 6);
+
+            publisher pbl3;
+            pbl3 = std::move(pbl2);
+            ASSERT_TRUE(pbl3.subscribers.size() == 6);
+      }
 
       struct subscriber_exeption
       {
