@@ -86,9 +86,9 @@ namespace roro_lib
                   {
                   }
 
-                  key_subscriber(key_subscriber&& key_arg) noexcept : rvalue(key_arg.rvalue),
-                                                                      key_type(key_arg.key_type),
-                                                                      key_value(std::move(key_arg.key_value))
+                  key_subscriber(key_subscriber&& key_arg) noexcept : rvalue(key_arg.rvalue),                                                                      
+                                                                      key_value(std::move(key_arg.key_value)),
+                                                                      key_type(key_arg.key_type)
                   {                        
                   }
 
