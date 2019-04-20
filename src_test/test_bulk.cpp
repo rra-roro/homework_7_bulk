@@ -2,7 +2,6 @@
 #include "gtest/gtest_prod.h"
 
 #include "lib_version.h"
-//#include <variant>
 
 #define PRIVATE_TEST 1
 #include "publisher.h"
@@ -360,14 +359,6 @@ namespace roro_lib
 
       TEST_F(PublisherMixinTest, NotifiRetValues)
       {
-            //using Facke = struct
-            //{
-            //};
-            //using fn_mem_t = void (Facke::*)(void);
-
-            //std::variant<void*, void (*)(void), fn_mem_t> aaa;
-
-
             publisher_not_void pbl;
             pbl.add_subscriber(fn1);
             pbl.add_subscriber(fn2);

@@ -4,6 +4,7 @@
 #include <optional>
 #include <functional>
 #include <type_traits>
+#include <variant>
 
 namespace roro_lib
 {
@@ -17,7 +18,15 @@ namespace roro_lib
                   using fn_mem_t = void (Facke::*)(void);
 
                   bool rvalue;
-                  std::pair<const void*, fn_mem_t> key_value;                 
+                  enum pointer_t
+                  {
+                        data_pointer,
+                        fun_pointer
+                  };
+
+                  std::pair<std::variant<const void*, void (*)(void)>, fn_mem_t> key_value;
+
+                  pointer_t key_type;
 
                   key_subscriber() = delete;
 
@@ -26,12 +35,11 @@ namespace roro_lib
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
                   template <typename T, typename FM,
-                            typename FMx = void (Facke::*)(void),
-                            typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr
-                  >
-                  key_subscriber(T&& obj, FM fn) : rvalue(true)
+                      typename FMx = void (Facke::*)(void),
+                      typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                  key_subscriber(T&& obj, FM fn) : rvalue(true), key_type(pointer_t::data_pointer)
                   {
-                        key_value.first = static_cast<void*>(&obj);
+                        key_value.first = &obj;
 
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
@@ -40,12 +48,11 @@ namespace roro_lib
                   }
 
                   template <typename T, typename FM,
-                            typename FMx = void (Facke::*)(void),
-                            typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr
-                  >
-                  key_subscriber(T&& obj, FM fn) : rvalue(false)
+                      typename FMx = void (Facke::*)(void),
+                      typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                  key_subscriber(T&& obj, FM fn) : rvalue(false), key_type(pointer_t::data_pointer)
                   {
-                        key_value.first = static_cast<void*>(&obj);
+                        key_value.first = &obj;
 
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
@@ -59,26 +66,28 @@ namespace roro_lib
                   template <typename F,
                       typename std::enable_if_t<std::is_pointer_v<F> &&
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
-                  key_subscriber(F obj) : rvalue(false)
+                  key_subscriber(F obj) : rvalue(false), key_type(pointer_t::fun_pointer)
                   {
-                        key_value.first = reinterpret_cast<void*>(obj);
+                        key_value.first = obj;
                         key_value.second = nullptr;
                   }
 
                   template <typename T,
-                            typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr>
-                  key_subscriber(const T& obj) : rvalue(false)
+                      typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr>
+                  key_subscriber(const T& obj) : rvalue(false), key_type(pointer_t::data_pointer)
                   {
-                        key_value.first = static_cast<const void*>(&obj);
+                        key_value.first = &obj;
                         key_value.second = nullptr;
                   }
 
-                  key_subscriber(const key_subscriber& key_arg) noexcept: rvalue(key_arg.rvalue),
-                                                                          key_value(key_arg.key_value)
+                  key_subscriber(const key_subscriber& key_arg) noexcept : rvalue(key_arg.rvalue),
+                                                                           key_value(key_arg.key_value),
+                                                                           key_type(key_arg.key_type)
                   {
                   }
 
-                  key_subscriber(key_subscriber&& key_arg) noexcept: rvalue(key_arg.rvalue)
+                  key_subscriber(key_subscriber&& key_arg) noexcept : rvalue(key_arg.rvalue),
+                                                                      key_type(key_arg.key_type)
                   {
                         key_value.swap(key_arg.key_value);
                   }
@@ -87,7 +96,11 @@ namespace roro_lib
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
             {
                   // Априори считаем, каждое rvalue значение уникальным подписчиком
-
+                  if (arg1.key_type != arg2.key_type)
+                  {
+                        return false;
+                  }
+                  else
                   if (arg1.rvalue == true && arg2.rvalue == true)
                   {
                         return false;
@@ -114,9 +127,19 @@ namespace std
                   return reinterpret_cast<std::intptr_t>(ptr);
             }
 
+            std::intptr_t intptr_cast(void (*ptr)(void)) const noexcept
+            {
+                  return reinterpret_cast<std::intptr_t>(ptr);
+            }
+
             result_t operator()(const argument_t& key_arg) const noexcept
             {
-                  return std::hash<std::intptr_t>{}(intptr_cast(key_arg.key_value.first));
+                  using ptr_t = argument_t::pointer_t;
+
+                  if (key_arg.key_type == ptr_t::data_pointer)
+                        return std::hash<std::intptr_t>{}(intptr_cast(std::get<ptr_t::data_pointer>(key_arg.key_value.first)));
+                  else
+                        return std::hash<std::intptr_t>{}(intptr_cast(std::get<ptr_t::fun_pointer>(key_arg.key_value.first)));
             }
       };
 }
@@ -155,9 +178,8 @@ namespace roro_lib
 
         public:
             template <typename F,
-                      typename std::enable_if_t<std::is_pointer_v<F> &&
-                                                std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr
-            >
+                typename std::enable_if_t<std::is_pointer_v<F> &&
+                                          std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
             subscriber_handle add_subscriber(F fn)
             {
                   static_assert(test_arg_subscriber_v<F>,
@@ -167,8 +189,7 @@ namespace roro_lib
             }
 
             template <typename T, typename MF,
-                       typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr
-            >
+                typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr>
             subscriber_handle add_subscriber(T&& obj, MF mfn)
             {
                   static_assert(test_arg_subscriber_v<MF>,
@@ -178,9 +199,8 @@ namespace roro_lib
             }
 
             template <typename Ref_,
-                      typename T = std::remove_reference_t<Ref_>,
-                      typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr
-            >
+                typename T = std::remove_reference_t<Ref_>,
+                typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
             subscriber_handle add_subscriber(Ref_&& obj)
             {
                   if constexpr (std::is_same_v<T, std::function<R(Args...)>>)
@@ -200,8 +220,7 @@ namespace roro_lib
             }
 
             template <typename T,
-                      typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr
-            >
+                typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr>
             subscriber_handle add_subscriber(const T& obj)
             {
                   return add_subscriber(std::function<R(Args...)>(obj));
@@ -226,14 +245,11 @@ namespace roro_lib
             }
 
         protected:
-
             auto notify(Args... args)
             {
                   notify_exception_list.clear();
 
-                  const auto try_call_fn = [&](const subscribers_reference& subscriber) ->
-                                                        std::conditional_t<std::is_void_v<R>, void, std::optional<R>>
-                  {
+                  const auto try_call_fn = [&](const subscribers_reference& subscriber) -> std::conditional_t<std::is_void_v<R>, void, std::optional<R>> {
                         try
                         {
                               return subscriber.second(args...);
@@ -247,7 +263,7 @@ namespace roro_lib
                               notify_exception_list.emplace_back("Unknown exception.");
                         }
                         if constexpr (!std::is_void_v<R>)
-                              return{};
+                              return {};
                   };
 
                   if constexpr (!std::is_void_v<R>)
@@ -306,9 +322,8 @@ namespace roro_lib
 
             // добавляем function
             template <typename Ref_,
-                      typename T = std::remove_reference_t<Ref_>,
-                      typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr
-            >
+                typename T = std::remove_reference_t<Ref_>,
+                typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr>
             constexpr subscriber_handle add_subscriber_internal(Ref_&& fn)
             {
                   internal::key_subscriber fn_key(fn);
@@ -323,10 +338,9 @@ namespace roro_lib
 
             // добавляем прочие функторы
             template <std::size_t I = 0,
-                      typename T,
-                      typename F = R (T::*)(Args...),
-                      std::size_t... PhNumber
-            >
+                typename T,
+                typename F = R (T::*)(Args...),
+                std::size_t... PhNumber>
             constexpr subscriber_handle add_subscriber_internal(T&& obj, F fn)
             {
                   if constexpr (I < sizeof...(Args))
@@ -344,7 +358,7 @@ namespace roro_lib
                   {
                         using namespace std::placeholders;
                         constexpr auto placeholders_tuple = std::make_tuple(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10,
-                                                                            _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
+                            _11, _12, _13, _14, _15, _16, _17, _18, _19, _20);
 
                         if constexpr (std::is_rvalue_reference_v<T&&>)
                               return subscribers.insert({ { std::forward<T>(obj), fn },
@@ -363,15 +377,15 @@ namespace roro_lib
 
             template <typename Ret, typename... A>
             struct test_arg_subscriber<Ret (*)(A...),
-                                      std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                                                                      std::tuple<R, Args...>>>> : std::true_type
+                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
+                    std::tuple<R, Args...>>>> : std::true_type
             {
             };
 
             template <typename Ret, typename C, typename... A>
             struct test_arg_subscriber<Ret (C::*)(A...),
-                                       std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                                                                       std::tuple<R, Args...>>>> : std::true_type
+                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
+                    std::tuple<R, Args...>>>> : std::true_type
             {
             };
 
