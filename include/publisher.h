@@ -10,6 +10,11 @@ namespace roro_lib
 {
       namespace internal
       {
+            /*!   \brief  Эта структура является ключом для unordered_map, где хранятся ф-ии подписчиков, принимающие уведомления. 
+
+                          На основании этого ключа можно однозначно идентифицировать исходную ф-ию подписчика. Используется для
+                          контроля за тем, чтобы не добавлять уже имеющиеся ф-ии в список подписчиков.
+            */
             struct key_subscriber
             {
                   using Facke = struct
@@ -29,10 +34,10 @@ namespace roro_lib
 
                   key_subscriber() = delete;
 
-//#if __GNUG__
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wcast-function-type"
-//#endif
+#if __GNUG__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
                   template <typename T, typename FM,
                       typename FMx = void (Facke::*)(void),
                       typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
@@ -43,7 +48,7 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed expression C++17 [8.2.10/10]
+                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed cast C++17 [8.2.10/10]
                   }
 
                   template <typename T, typename FM,
@@ -56,18 +61,18 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed expression C++17 [8.2.10/10]
+                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed cast  C++17 [8.2.10/10]
                   }
 
-//#if __GNUG__
-//#pragma GCC diagnostic pop
-//#endif
+#if __GNUG__
+#pragma GCC diagnostic pop
+#endif
                   template <typename F,
                       typename std::enable_if_t<std::is_pointer_v<F> &&
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
                   key_subscriber(F obj) : rvalue(false), key_type(pointer_t::fun_pointer)
                   {
-                        key_value.first = reinterpret_cast<void (*)(void)>(obj);    // allowed expression C++17 [8.2.10/6]
+                        key_value.first = reinterpret_cast<void (*)(void)>(obj);    // allowed cast  C++17 [8.2.10/6]
                         key_value.second = nullptr;
                   }
 
@@ -88,6 +93,10 @@ namespace roro_lib
                   ~key_subscriber() = default;
             };
 
+            /*!   \brief  ф-ия сравнения двух ключей key_subscriber.  
+
+                          Позволяет определить, есть ли в нашем unordered_map уже этот подписчик.
+            */
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
             {                  
                   if (arg1.key_type != arg2.key_type)
@@ -106,7 +115,7 @@ namespace roro_lib
 
 namespace std
 {
-      /*!   \brief  Это специализация std::hash для нашей структуры key.
+      /*!   \brief  Это специализация std::hash для нашей структуры key_subscriber.
 
       */
       template <>
@@ -117,12 +126,12 @@ namespace std
 
             std::intptr_t intptr_cast(const void* const ptr) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);    // allowed expression C++17 [8.2.10/4]
+                  return reinterpret_cast<std::intptr_t>(ptr);    // allowed cast C++17 [8.2.10/4]
             }
 
             std::intptr_t intptr_cast(void (*ptr)(void)) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);    //  allowed expression C++17 [8.2.10/4]  
+                  return reinterpret_cast<std::intptr_t>(ptr);    //  allowed cast C++17 [8.2.10/4]  
             }
 
             result_t operator()(const argument_t& key_arg) const noexcept
@@ -141,6 +150,15 @@ namespace std
 
 namespace roro_lib
 {
+      /*!   \brief  mixin класс, реализующий функциональность паттерна Наблюдатель/Observer
+
+                    Мы можем добавить его, как базовый класс, в любой другой класс, что автоматически добавит в этот класс функциональность паттерна `наблюдатель`
+                    Класс *по умолчанию* сохраняет только уникальных подписчиков, т.е. все подписчики получат уведомления только один раз.
+                    Класс параметризуется общей сигнатурой ф-ии всех подписиков, т.е. все подписчики должны соответствовать этой сигнатуре.
+
+                     \tparam  R     -тип взвращаемого значения ф-ии подписчика
+                     \tparam  Args  -тип аргументов ф-ии подписчика
+      */       
       template <typename>
       class publisher_mixin;
 
@@ -156,6 +174,13 @@ namespace roro_lib
             using subscribers_reference = typename container_subscribers_t::reference;
             using subscribers_iterator = typename container_subscribers_t::iterator;
 
+            /*!   \brief  внутренний вспомогательнй класс, представляет собой дискрептор подписчика добавленного в список
+
+                          Это "чистая выдумка", который однозначно идентифицирует ф-ию подписчика в unordered_map
+                          В первую очередь, возвращается ф-ией добавления подписчика add_subscriber(), чтобы в последствии
+                          при необходимости на основе этого дискрептора можно было бы отписаться от уведомления, передав
+                          это дискрептор в ф-ию del_subscriber
+            */
             class subscriber_handle
             {
                   subscribers_value_type null_pair = { { nullptr, nullptr }, nullptr };
