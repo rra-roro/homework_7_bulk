@@ -43,7 +43,7 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);
+                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed expression C++17 [8.2.10/10]
                   }
 
                   template <typename T, typename FM,
@@ -56,7 +56,7 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);
+                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed expression C++17 [8.2.10/10]
                   }
 
 #if __GNUG__
@@ -67,7 +67,7 @@ namespace roro_lib
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
                   key_subscriber(F obj) : rvalue(false), key_type(pointer_t::fun_pointer)
                   {
-                        key_value.first = reinterpret_cast<void (*)(void)>(obj);
+                        key_value.first = reinterpret_cast<void (*)(void)>(obj);    // allowed expression C++17 [8.2.10/6]
                         key_value.second = nullptr;
                   }
 
@@ -89,15 +89,14 @@ namespace roro_lib
             };
 
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
-            {
-                  // Априори считаем, каждое rvalue значение уникальным подписчиком
+            {                  
                   if (arg1.key_type != arg2.key_type)
                   {
                         return false;
                   }
                   else if (arg1.rvalue == true && arg2.rvalue == true)
-                  {
-                        return false;
+                  {    
+                        return false; // Априори считаем, каждое rvalue уникальным подписчиком
                   }
                   else
                         return (arg1.key_value == arg2.key_value);
@@ -118,12 +117,12 @@ namespace std
 
             std::intptr_t intptr_cast(const void* const ptr) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);
+                  return reinterpret_cast<std::intptr_t>(ptr);    // allowed expression C++17 [8.2.10/4]
             }
 
             std::intptr_t intptr_cast(void (*ptr)(void)) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);
+                  return reinterpret_cast<std::intptr_t>(ptr);    //  allowed expression C++17 [8.2.10/4]  
             }
 
             result_t operator()(const argument_t& key_arg) const noexcept
