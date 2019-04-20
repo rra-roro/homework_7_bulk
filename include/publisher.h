@@ -17,15 +17,14 @@ namespace roro_lib
                   };
                   using fn_mem_t = void (Facke::*)(void);
 
-                  bool rvalue;
                   enum pointer_t
                   {
                         data_pointer,
                         fun_pointer
                   };
 
+                  bool rvalue;
                   std::pair<std::variant<const void*, void (*)(void)>, fn_mem_t> key_value;
-
                   pointer_t key_type;
 
                   key_subscriber() = delete;
@@ -80,26 +79,13 @@ namespace roro_lib
                         key_value.second = nullptr;
                   }
 
-                  key_subscriber(const key_subscriber& key_arg) noexcept : rvalue(key_arg.rvalue),
-                                                                           key_value(key_arg.key_value),
-                                                                           key_type(key_arg.key_type)
-                  {
-                  }
+                  key_subscriber(const key_subscriber& key_arg) noexcept = default;
+                  key_subscriber(key_subscriber&& key_arg) noexcept = default;
 
-                  key_subscriber(key_subscriber&& key_arg) noexcept : rvalue(key_arg.rvalue),                                                                      
-                                                                      key_value(std::move(key_arg.key_value)),
-                                                                      key_type(key_arg.key_type)
-                  {                        
-                  }
+                  key_subscriber& operator=(const key_subscriber& key_arg) noexcept = default;
+                  key_subscriber& operator=(key_subscriber&& key_arg) noexcept = default;
 
-                  key_subscriber& operator=(key_subscriber&& key_arg) noexcept
-                  {
-                        rvalue = key_arg.rvalue;
-                        key_type = key_arg.key_type;
-                        key_value = std::move(key_arg.key_value);
-                        return *this;
-                  }
-
+                  ~key_subscriber() = default;
             };
 
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
