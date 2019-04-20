@@ -39,8 +39,9 @@ namespace roro_lib
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
                   template <typename T, typename FM,
-                      typename FMx = void (Facke::*)(void),
-                      typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                            typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<std::is_rvalue_reference_v<T&&>>* tmp = nullptr
+                  >
                   key_subscriber(T&& obj, FM fn) : rvalue(true), key_type(pointer_t::data_pointer)
                   {
                         key_value.first = &obj;
@@ -48,12 +49,13 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed cast C++17 [8.2.10/10]
+                              key_value.second = reinterpret_cast<FMx>(fn); //  allowed cast C++17 [8.2.10/10]
                   }
 
                   template <typename T, typename FM,
-                      typename FMx = void (Facke::*)(void),
-                      typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr>
+                            typename FMx = void (Facke::*)(void),
+                            typename std::enable_if_t<!std::is_rvalue_reference_v<T&&>>* tmp = nullptr
+                  >
                   key_subscriber(T&& obj, FM fn) : rvalue(false), key_type(pointer_t::data_pointer)
                   {
                         key_value.first = &obj;
@@ -61,23 +63,25 @@ namespace roro_lib
                         if constexpr (std::is_same_v<FM, std::nullptr_t>)
                               key_value.second = fn;
                         else
-                              key_value.second = reinterpret_cast<FMx>(fn);      //  allowed cast  C++17 [8.2.10/10]
+                              key_value.second = reinterpret_cast<FMx>(fn); //  allowed cast  C++17 [8.2.10/10]
                   }
 
 #if __GNUG__
 #pragma GCC diagnostic pop
 #endif
                   template <typename F,
-                      typename std::enable_if_t<std::is_pointer_v<F> &&
-                                                std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
+                            typename std::enable_if_t<std::is_pointer_v<F> &&
+                                                      std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr
+                  >
                   key_subscriber(F obj) : rvalue(false), key_type(pointer_t::fun_pointer)
                   {
-                        key_value.first = reinterpret_cast<void (*)(void)>(obj);    // allowed cast  C++17 [8.2.10/6]
+                        key_value.first = reinterpret_cast<void (*)(void)>(obj); // allowed cast  C++17 [8.2.10/6]
                         key_value.second = nullptr;
                   }
 
                   template <typename T,
-                      typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr>
+                            typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr
+                  >
                   key_subscriber(const T& obj) : rvalue(false), key_type(pointer_t::data_pointer)
                   {
                         key_value.first = &obj;
@@ -98,13 +102,13 @@ namespace roro_lib
                           Позволяет определить, есть ли в нашем unordered_map уже этот подписчик.
             */
             bool operator==(const key_subscriber& arg1, const key_subscriber& arg2) noexcept
-            {                  
+            {
                   if (arg1.key_type != arg2.key_type)
                   {
                         return false;
                   }
                   else if (arg1.rvalue == true && arg2.rvalue == true)
-                  {    
+                  {
                         return false; // Априори считаем, каждое rvalue уникальным подписчиком
                   }
                   else
@@ -126,12 +130,12 @@ namespace std
 
             std::intptr_t intptr_cast(const void* const ptr) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);    // allowed cast C++17 [8.2.10/4]
+                  return reinterpret_cast<std::intptr_t>(ptr); // allowed cast C++17 [8.2.10/4]
             }
 
             std::intptr_t intptr_cast(void (*ptr)(void)) const noexcept
             {
-                  return reinterpret_cast<std::intptr_t>(ptr);    //  allowed cast C++17 [8.2.10/4]  
+                  return reinterpret_cast<std::intptr_t>(ptr); //  allowed cast C++17 [8.2.10/4]
             }
 
             result_t operator()(const argument_t& key_arg) const noexcept
@@ -158,7 +162,7 @@ namespace roro_lib
 
                      \tparam  R     -тип взвращаемого значения ф-ии подписчика
                      \tparam  Args  -тип аргументов ф-ии подписчика
-      */       
+      */
       template <typename>
       class publisher_mixin;
 
@@ -416,7 +420,7 @@ namespace roro_lib
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers2);
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers3);
             FRIEND_TEST(PublisherMixinTest, copy);
-            FRIEND_TEST(PublisherMixinTest, move);            
+            FRIEND_TEST(PublisherMixinTest, move);
             FRIEND_TEST(PublisherMixinTest, exeption);
             FRIEND_TEST(PublisherMixinTest, DelSubscribers);
             FRIEND_TEST(PublisherMixinTest, NotifiRetValues);
