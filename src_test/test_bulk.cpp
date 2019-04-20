@@ -2,6 +2,7 @@
 #include "gtest/gtest_prod.h"
 
 #include "lib_version.h"
+//#include <variant>
 
 #define PRIVATE_TEST 1
 #include "publisher.h"
@@ -324,8 +325,10 @@ namespace roro_lib
             using Base::get_fn_by_handle;
             using Base::get_last_notify_exception;
 
+        protected:
             using notify_ret_t = std::invoke_result_t<decltype(&Base::notify), Base, int, int>;
 
+        public:
             notify_ret_t retvs;
 
             int run()
@@ -358,6 +361,14 @@ namespace roro_lib
 
       TEST_F(PublisherMixinTest, NotifiRetValues)
       {
+            //using Facke = struct
+            //{
+            //};
+            //using fn_mem_t = void (Facke::*)(void);
+
+            //std::variant<void*, void (*)(void), fn_mem_t> aaa;
+
+
             publisher_not_void pbl;
             pbl.add_subscriber(fn1);
             pbl.add_subscriber(fn2);
