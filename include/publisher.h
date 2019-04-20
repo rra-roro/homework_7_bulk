@@ -16,8 +16,8 @@ namespace roro_lib
                   };
                   using fn_mem_t = void (Facke::*)(void);
 
-                  std::pair<void*, fn_mem_t> key_value;
                   bool rvalue;
+                  std::pair<void*, fn_mem_t> key_value;                 
 
                   key_subscriber() = delete;
 
