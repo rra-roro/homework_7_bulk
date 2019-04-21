@@ -154,6 +154,9 @@ namespace std
 
 namespace roro_lib
 {
+      template <typename>
+      class publisher_mixin;
+
       /*!   \brief  mixin класс, реализующий функциональность паттерна Наблюдатель/Observer
 
                     Мы можем добавить его, как базовый класс, в любой другой класс, что автоматически добавит в этот класс функциональность паттерна `наблюдатель`
@@ -163,9 +166,6 @@ namespace roro_lib
                      \tparam  R     -тип взвращаемого значения ф-ии подписчика
                      \tparam  Args  -тип аргументов ф-ии подписчика
       */
-      template <typename>
-      class publisher_mixin;
-
       template <typename R, typename... Args>
       class publisher_mixin<R(Args...)>
       {
