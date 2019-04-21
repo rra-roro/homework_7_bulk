@@ -80,7 +80,7 @@ namespace roro_lib
                   }
 
                   template <typename T,
-                            typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr
+                           typename std::enable_if_t<!std::is_pointer_v<T>>* Facke = nullptr
                   >
                   key_subscriber(const T& obj) : rvalue(false), key_type(pointer_t::data_pointer)
                   {
@@ -201,8 +201,9 @@ namespace roro_lib
 
         public:
             template <typename F,
-                typename std::enable_if_t<std::is_pointer_v<F> &&
-                                          std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr>
+                      typename std::enable_if_t<std::is_pointer_v<F> &&
+                                                std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr
+            >
             subscriber_handle add_subscriber(F fn)
             {
                   static_assert(test_arg_subscriber_v<F>,
@@ -212,7 +213,8 @@ namespace roro_lib
             }
 
             template <typename T, typename MF,
-                typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr>
+                      typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr
+            >
             subscriber_handle add_subscriber(T&& obj, MF mfn)
             {
                   static_assert(test_arg_subscriber_v<MF>,
@@ -222,8 +224,9 @@ namespace roro_lib
             }
 
             template <typename Ref_,
-                typename T = std::remove_reference_t<Ref_>,
-                typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr>
+                      typename T = std::remove_reference_t<Ref_>,
+                      typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr
+            >
             subscriber_handle add_subscriber(Ref_&& obj)
             {
                   if constexpr (std::is_same_v<T, std::function<R(Args...)>>)
@@ -243,7 +246,8 @@ namespace roro_lib
             }
 
             template <typename T,
-                typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr>
+                      typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr
+            >
             subscriber_handle add_subscriber(const T& obj)
             {
                   return add_subscriber(std::function<R(Args...)>(obj));
@@ -272,7 +276,8 @@ namespace roro_lib
             {
                   notify_exception_list.clear();
 
-                  const auto try_call_fn = [&](const subscribers_reference& subscriber) -> std::conditional_t<std::is_void_v<R>, void, std::optional<R>> {
+                  const auto try_call_fn = [&](const subscribers_reference& subscriber) -> std::conditional_t<std::is_void_v<R>, void, std::optional<R>>
+                  {
                         try
                         {
                               return subscriber.second(args...);
@@ -345,8 +350,9 @@ namespace roro_lib
 
             // добавляем function
             template <typename Ref_,
-                typename T = std::remove_reference_t<Ref_>,
-                typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr>
+                      typename T = std::remove_reference_t<Ref_>,
+                      typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr
+            >
             constexpr subscriber_handle add_subscriber_internal(Ref_&& fn)
             {
                   internal::key_subscriber fn_key(fn);
@@ -361,9 +367,10 @@ namespace roro_lib
 
             // добавляем прочие функторы
             template <std::size_t I = 0,
-                typename T,
-                typename F = R (T::*)(Args...),
-                std::size_t... PhNumber>
+                      typename T,
+                      typename F = R (T::*)(Args...),
+                      std::size_t... PhNumber
+            >
             constexpr subscriber_handle add_subscriber_internal(T&& obj, F fn)
             {
                   if constexpr (I < sizeof...(Args))

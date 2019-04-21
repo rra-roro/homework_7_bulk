@@ -7,11 +7,14 @@
 # AfterStruct; AfterUnion
 
 BasedOnStyle: LLVM
+Standard: Cpp11
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
+AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: true
 BraceWrapping:
   AfterClass: false    # TODO: проверьте
   AfterControlStatement: false    # TODO: проверьте
