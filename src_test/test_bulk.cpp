@@ -80,8 +80,22 @@ namespace roro_lib
             pbl.add_subscriber(fn1);                 // function == nullptr  - игнорируем
             pbl.add_subscriber(fn2);                 // Уже есть в подписчиках
 
+            // ----
+            auto l1 = []() { int i = 1; i++; };
 
-            ASSERT_TRUE(pbl.subscribers.size() == 8);
+            pbl.add_subscriber(l1);
+            ASSERT_TRUE(pbl.subscribers.size() == 9);
+
+            pbl.add_subscriber(l1);
+            ASSERT_TRUE(pbl.subscribers.size() == 9);     // Уже есть в подписчиках
+
+            pbl.add_subscriber([]() { int i = 1; i++; }); //  rvalue
+            ASSERT_TRUE(pbl.subscribers.size() == 10);
+
+            pbl.add_subscriber([]() { int i = 1; i++; }); //  rvalue - добавляем повторно
+            ASSERT_TRUE(pbl.subscribers.size() == 11);
+
+            ASSERT_TRUE(pbl.subscribers.size() == 11);
       }
 
 
