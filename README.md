@@ -35,9 +35,10 @@ struct subscriber
 
 subscriber sscr;
 
-pbl.add_subscriber(fn);                       // подписываем ф-ию
-pbl.add_subscriber(sscr);                     // подписываем subscriber::operator()
-pbl.add_subscriber(sscr, &subscriber::test);  // подписываем subscriber::test()
+pbl.add_subscriber(fn);                        // подписываем ф-ию
+pbl.add_subscriber(sscr);                      // подписываем subscriber::operator()
+pbl.add_subscriber(sscr, &subscriber::test);   // подписываем subscriber::test()
+pbl.add_subscriber([]() { int i = 1; i++; });  // подписываем Лямбду
 
 ```
 
