@@ -1,4 +1,5 @@
-﻿#include "subscribers.h"
+﻿#include "exception_list.h"
+#include "subscribers.h"
 #include "bulk_reader.h"
 #include <iostream>
 #include <exception>
@@ -78,14 +79,19 @@ int main(int argc, char* argv[])
             command_reader cmdr(size_bulk);
 
             save_log_file log;
-            cmdr.add_subscriber(log, &save_log_file::save);
-            cmdr.add_subscriber(output_to_console);
+            cmdr.subscribe(log, &save_log_file::save);
+            cmdr.subscribe(output_to_console);
 
             cmdr.read();
       }
+      catch (const exception_ptr_list& ex_list)
+      {
+            exception_ptr_list::print(ex_list);
+            return EXIT_FAILURE;
+      }
       catch (const exception& ex)
       {
-            cerr << "Error: " << ex.what() << endl;
+            print_nested_exception(ex);
             return EXIT_FAILURE;
       }
       catch (...)

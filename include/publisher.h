@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "exception_list.h"
 #include <unordered_map>
 #include <list>
 #include <optional>
@@ -181,9 +182,9 @@ namespace roro_lib
             /*!   \brief  внутренний вспомогательнй класс, представляет собой дискрептор подписчика добавленного в список
 
                           Это "чистая выдумка", который однозначно идентифицирует ф-ию подписчика в unordered_map
-                          В первую очередь, возвращается ф-ией добавления подписчика add_subscriber(), чтобы в последствии
+                          В первую очередь, возвращается ф-ией добавления подписчика subscribe(), чтобы в последствии
                           при необходимости на основе этого дискрептора можно было бы отписаться от уведомления, передав
-                          это дискрептор в ф-ию del_subscriber
+                          это дискрептор в ф-ию unsubscribe
             */
             class subscriber_handle
             {
@@ -204,57 +205,48 @@ namespace roro_lib
                       typename std::enable_if_t<std::is_pointer_v<F> &&
                                                 std::is_function_v<typename std::remove_pointer_t<F>>>* Facke = nullptr
             >
-            subscriber_handle add_subscriber(F fn)
+            subscriber_handle subscribe(F fn)
             {
-                  static_assert(test_arg_subscriber_v<F>,
+                  static_assert(std::is_invocable_v<F, Args...>,
                       "the signature of the subscriber function must match the signature declared by the publisher");
 
-                  return add_subscriber_internal(fn);
+                  return subscribe_internal(fn);
             }
 
             template <typename T, typename MF,
                       typename std::enable_if_t<std::is_member_function_pointer_v<MF>>* Facke = nullptr
             >
-            subscriber_handle add_subscriber(T&& obj, MF mfn)
+            subscriber_handle subscribe(T&& obj, MF mfn)
             {
-                  static_assert(test_arg_subscriber_v<MF>,
+                  static_assert(std::is_invocable_v<MF, T, Args...>,
                       "the signature of the subscriber member function must match the signature declared by the publisher");
 
-                  return add_subscriber_internal(std::forward<T>(obj), mfn);
+                  return subscribe_internal(std::forward<T>(obj), mfn);
             }
 
             template <typename Ref_,
                       typename T = std::remove_reference_t<Ref_>,
-                      typename std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::operator())>>* Facke = nullptr
+                      typename std::enable_if_t<!std::is_function_v<typename std::remove_pointer_t<T>>>* Facke = nullptr
             >
-            subscriber_handle add_subscriber(Ref_&& obj)
+            subscriber_handle subscribe(Ref_&& obj)
             {
+                  static_assert(std::is_invocable_v<T, Args...>,
+                      "the signature of the subscriber functor must match the signature declared by the publisher");
+
                   if constexpr (std::is_same_v<T, std::function<R(Args...)>>)
                   {
                         if (obj != nullptr) // function != nullptr
-                              return add_subscriber_internal(std::forward<Ref_>(obj));
+                              return subscribe_internal(std::forward<Ref_>(obj));
                         else
                               return {};
                   }
                   else
                   {
-                        static_assert(test_arg_subscriber_v<decltype(&T::operator())>,
-                            "the signature of the subscriber functor must match the signature declared by the publisher");
-
-                        return add_subscriber(std::forward<Ref_>(obj), &T::operator());
+                        return subscribe_internal(std::forward<Ref_>(obj));
                   }
             }
 
-            template <typename T,
-                      typename std::enable_if_t<std::is_bind_expression_v<T>>* Facke = nullptr
-            >
-            subscriber_handle add_subscriber(const T& obj)
-            {
-                  return add_subscriber(std::function<R(Args...)>(obj));
-            }
-
-
-            void del_subscriber(const subscriber_handle& handle)
+            void unsubscribe(const subscriber_handle& handle)
             {
                   for (auto it = subscribers.begin(); it != subscribers.end(); ++it)
                   {
@@ -266,7 +258,7 @@ namespace roro_lib
                   }
             }
 
-            void del_all_subscribers()
+            void unsubscribe_all()
             {
                   subscribers.clear();
             }
@@ -282,14 +274,11 @@ namespace roro_lib
                         {
                               return subscriber.second(args...);
                         }
-                        catch (const std::exception& ex)
-                        {
-                              notify_exception_list.emplace_back(ex.what());
-                        }
                         catch (...)
                         {
-                              notify_exception_list.emplace_back("Unknown exception.");
+                              notify_exception_list.add_back_exception_ptr(std::current_exception());
                         }
+
                         if constexpr (!std::is_void_v<R>)
                               return {};
                   };
@@ -328,7 +317,7 @@ namespace roro_lib
                   return {};
             }
 
-            const std::list<std::runtime_error>& get_last_notify_exception()
+            exception_ptr_list& get_last_notify_exception() noexcept
             {
                   return notify_exception_list;
             }
@@ -338,44 +327,51 @@ namespace roro_lib
 
         private:
             container_subscribers_t subscribers;
-            std::list<std::runtime_error> notify_exception_list;
+            exception_ptr_list notify_exception_list;
 
 
             // добавляем указатель на ф-ию
-            template <typename T>
-            constexpr subscriber_handle add_subscriber_internal(const T& fn)
+            template <typename T,
+                      typename std::enable_if_t<std::is_pointer_v<T> &&
+                                                std::is_function_v<typename std::remove_pointer_t<T>>>* Facke = nullptr>
+            constexpr subscriber_handle subscribe_internal(const T& fn)
             {
                   return subscribers.insert({ { fn }, fn });
             }
 
-            // добавляем function
+
+            // добавляем функторы
             template <typename Ref_,
                       typename T = std::remove_reference_t<Ref_>,
-                      typename std::enable_if_t<std::is_same_v<T, std::function<R(Args...)>>>* Facke = nullptr
-            >
-            constexpr subscriber_handle add_subscriber_internal(Ref_&& fn)
+                      typename std::enable_if_t<std::is_invocable_v<T, Args...> &&
+                                                !std::is_function_v<typename std::remove_pointer_t<T>>>* Facke = nullptr>
+            constexpr subscriber_handle subscribe_internal(Ref_&& fn)
             {
                   internal::key_subscriber fn_key(fn);
 
                   if constexpr (std::is_rvalue_reference_v<Ref_&&>)
+                  {
                         fn_key.rvalue = true;
+                        return subscribers.insert({ fn_key, fn });
+                  }
                   else
+                  {
                         fn_key.rvalue = false;
-
-                  return subscribers.insert({ fn_key, fn });
+                        return subscribers.insert({ fn_key, std::ref(fn) });
+                  }                        
             }
 
-            // добавляем прочие функторы
+            // добавляем указатель на ф-ию член класса
             template <std::size_t I = 0,
                       typename T,
                       typename F = R (T::*)(Args...),
                       std::size_t... PhNumber
             >
-            constexpr subscriber_handle add_subscriber_internal(T&& obj, F fn)
+            constexpr subscriber_handle subscribe_internal(T&& obj, F fn)
             {
                   if constexpr (I < sizeof...(Args))
                   {
-                        return add_subscriber_internal<I + 1, T, F, PhNumber..., I>(obj, fn);
+                        return subscribe_internal<I + 1, T, F, PhNumber..., I>(obj, fn);
                   }
                   else if constexpr (sizeof...(Args) == 0)
                   {
@@ -392,42 +388,13 @@ namespace roro_lib
 
                         if constexpr (std::is_rvalue_reference_v<T&&>)
                               return subscribers.insert({ { std::forward<T>(obj), fn },
-                                  std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
+                                                          std::bind(fn, obj, std::get<PhNumber>(placeholders_tuple)...) });
                         else
                               return subscribers.insert({ { std::forward<T>(obj), fn },
-                                  std::bind(fn, std::ref(obj), std::get<PhNumber>(placeholders_tuple)...) });
+                                                          std::bind(fn, std::ref(obj), std::get<PhNumber>(placeholders_tuple)...) });
                   }
             }
 
-            // проверка соответствия сигнатуры подписчиков
-            template <typename, typename Facke = void>
-            struct test_arg_subscriber : std::false_type
-            {
-            };
-
-            template <typename Ret, typename... A>
-            struct test_arg_subscriber<Ret (*)(A...),
-                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                    std::tuple<R, Args...>>>> : std::true_type
-            {
-            };
-
-            template <typename Ret, typename C, typename... A>
-            struct test_arg_subscriber<Ret (C::*)(A...),
-                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                    std::tuple<R, Args...>>>> : std::true_type
-            {
-            };
-
-            template <typename Ret, typename C, typename... A>
-            struct test_arg_subscriber<Ret (C::*)(A...)const,
-                std::enable_if_t<std::is_same_v<std::tuple<Ret, A...>,
-                    std::tuple<R, Args...>>>> : std::true_type
-            {
-            };
-
-            template <class _Ty>
-            static constexpr bool test_arg_subscriber_v = test_arg_subscriber<_Ty>::value;
 
 #ifdef PRIVATE_TEST
             FRIEND_TEST(PublisherMixinTest, UniqueAddSubscribers1);

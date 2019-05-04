@@ -10,15 +10,22 @@ namespace roro_lib
 {
       void output_to_console(const std::vector<std::string>& command_list, std::time_t)
       {
-            std::string bulk = "bulk:";
-            for (auto cmd : command_list)
+            try
             {
-                  bulk += " " + cmd + ",";
-            };
+                  std::string bulk = "bulk:";
+                  for (auto cmd : command_list)
+                  {
+                        bulk += " " + cmd + ",";
+                  };
 
-            bulk.back() = '\n';
+                  bulk.back() = '\n';
 
-            std::cout << bulk;
+                  std::cout << bulk;
+            }
+            catch (...)
+            {
+                  std::throw_with_nested(std::runtime_error("output_to_console() failed."));
+            }
       }
 
       struct save_log_file
@@ -33,11 +40,18 @@ namespace roro_lib
 
             void save(const std::vector<std::string>& command_list, std::time_t time_first_cmd)
             {
-                  std::fstream fout(get_filename(time_first_cmd), std::fstream::out);
-
-                  for (auto cmd : command_list)
+                  try
                   {
-                        fout << cmd << "\n";
+                        std::fstream fout(get_filename(time_first_cmd), std::fstream::out);
+
+                        for (auto cmd : command_list)
+                        {
+                              fout << cmd << "\n";
+                        }
+                  }
+                  catch (...)
+                  {
+                        std::throw_with_nested(std::runtime_error("save_log_file::save() failed."));
                   }
             };
       };
