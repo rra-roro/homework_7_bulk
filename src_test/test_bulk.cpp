@@ -5,8 +5,6 @@
 
 #include "lib_version.h"
 
-
-
 #define PRIVATE_TEST 1
 #include "publisher.h"
 #include "bulk_reader.h"
