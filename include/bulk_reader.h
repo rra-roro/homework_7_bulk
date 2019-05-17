@@ -84,9 +84,13 @@ namespace roro_lib
                   {
                         notify_subscribers(cmd_ris.command_list, cmd_ris.time_first_cmd);
                   }
-                  cmd_ris.count_bracket = 0;
+                  else
+                  {
+                        cmd_ris.count_bracket = 0;
+                        cmd_ris.command_list.clear();
+                  }                  
                   cmd_ris.count_cmd_bulk = 0;
-                  cmd_ris.command_list.clear();
+                  
             }
 
         private:
