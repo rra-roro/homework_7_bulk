@@ -21,7 +21,7 @@ void help()
        Options:  
        -version      -get version of program
        -?            -about program (this info)
-       -N <size>     -count of command in the block. Should be > 1
+       -N <size>     -count of command in the block. Should be > 0
                                 
 )" << endl;
 }
