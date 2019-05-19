@@ -873,7 +873,7 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = ./googletest-release-1.8.0 ./CMakeFiles ./include/CLParser.h ./include/tchar_dummy.h ./src_lib/CLParser.cpp ./src_lib/tchar_dummy.cpp ./README.md
+EXCLUDE                = ./googletest-release-1.8.0 ./CMakeFiles ./include/CLParser.h ./include/tchar_dummy.h ./src_lib/CLParser.cpp ./src_lib/tchar_dummy.cpp ./README.md ./src_test/test_bulk.cpp
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
